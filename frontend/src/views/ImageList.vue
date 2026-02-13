@@ -1,25 +1,30 @@
 <template>
-  <div class="container">
+  <div class="view-container">
     <div class="header">
-      <router-link to="/">Projects</router-link> &gt;
-      <router-link :to="`/projects/${pid}/registries`">Registries</router-link> &gt;
-      <router-link :to="`/projects/${pid}/registries/${rid}/repositories`">Repositories</router-link> &gt;
-      Images
-      <h1>Images in {{ rname }}</h1>
+      <h1>Images ({{ rname }})</h1>
     </div>
-    <div v-if="store.loading" class="loading">Loading...</div>
+    <div v-if="store.loading" class="loading">Loading images...</div>
     <div v-else-if="store.error" class="error">{{ store.error }}</div>
-    <div v-else class="image-list">
-      <div v-if="store.images.length === 0">No images found.</div>
-      <div v-for="image in store.images" :key="image.digest" class="image-item">
-        <div class="image-info">
-          <div class="digest">{{ image.digest }}</div>
+    <div v-else class="list-container">
+      <div v-if="store.images.length === 0" class="empty-state">No images found.</div>
+      <div v-for="image in store.images" :key="image.digest" class="list-item">
+        <div class="item-info">
+          <div class="digest">{{ image.digest.substring(0, 12) }}...</div>
           <div class="tags">
             <span v-for="tag in image.tags" :key="tag" class="tag">{{ tag }}</span>
+            <span v-if="!image.tags || image.tags.length === 0" class="no-tags">No tags</span>
           </div>
-          <div class="image-details">Size: {{ image.size }} bytes | Created: {{ image.createdAt }}</div>
+          <div class="item-meta">
+            <span>Size: {{ (image.size / 1024 / 1024).toFixed(2) }} MB</span>
+            <span>Created: {{ new Date(image.createdAt).toLocaleDateString() }}</span>
+          </div>
         </div>
-        <button @click="deleteImg(image.digest)" class="delete-btn">Delete</button>
+        <button @click="deleteImg(image.digest)" class="delete-btn" title="Delete Image">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+            </svg>
+        </button>
       </div>
     </div>
   </div>
@@ -47,56 +52,97 @@ const deleteImg = async (digest: string) => {
 }
 </script>
 
-<style scoped>
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
+<style scoped lang="scss">
+@use '@/assets/main.scss' as *;
+
+.view-container {
+  h1 {
+    margin-bottom: 2rem;
+    color: $primary-color;
+  }
 }
-.image-list {
+
+.list-container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 1rem;
 }
-.image-item {
-  border: 1px solid #ddd;
-  padding: 15px;
-  border-radius: 4px;
+
+.list-item {
+  background: white;
+  border: 1px solid $border-color;
+  border-radius: 6px;
+  padding: 1.25rem;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  transition: box-shadow 0.2s;
+
+  &:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
 }
+
+.item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
 .digest {
-  font-family: monospace;
-  font-weight: bold;
+    font-family: monospace;
+    font-weight: bold;
+    color: $text-color;
 }
+
 .tags {
   display: flex;
-  gap: 5px;
-  margin: 5px 0;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.2rem 0;
 }
+
 .tag {
   background-color: #e9ecef;
-  padding: 2px 5px;
-  border-radius: 3px;
-  font-size: 0.9em;
+  color: #495057;
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.85rem;
+  font-family: monospace;
 }
-.image-details {
-  font-size: 0.9em;
-  color: #666;
+
+.no-tags {
+    color: $secondary-color;
+    font-style: italic;
+    font-size: 0.85rem;
 }
+
+.item-meta {
+  font-size: 0.85rem;
+  color: $secondary-color;
+  display: flex;
+  gap: 1rem;
+}
+
 .delete-btn {
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 3px;
-  cursor: pointer;
+  background-color: transparent;
+  color: $danger-color;
+  border: 1px solid transparent;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  margin-top: -0.25rem;
+
+  &:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+  }
 }
-.delete-btn:hover {
-  background-color: #c82333;
-}
-.error {
-  color: red;
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: $secondary-color;
+    border: 1px dashed $border-color;
+    border-radius: 8px;
 }
 </style>
