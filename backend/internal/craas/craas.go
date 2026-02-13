@@ -180,6 +180,8 @@ func (s *Service) fetchImageDigests(ctx context.Context, client *http.Client, to
 		return nil, err
 	}
 	req.Header.Set("X-Auth-Token", token)
+	// Add Accept headers to request Manifests/Indices properly instead of empty layer lists
+	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, */*")
 
 	resp, err := client.Do(req)
 	if err != nil {
