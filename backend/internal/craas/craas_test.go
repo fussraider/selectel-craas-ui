@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/selectel/craas-go/pkg/v1/repository"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -71,6 +72,74 @@ func TestListImages(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, images, 1)
 	assert.Equal(t, "sha256:abc", images[0].Digest)
+}
+
+func TestListImages_MissingTags(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/registries/reg1/repositories/repo1/images":
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			// Returns one image "abc" without tags
+			w.Write([]byte(`[{"digest": "sha256:abc", "tags": []}]`))
+		case "/v1/registries/reg1/repositories/repo1/tags":
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			// Returns "v1", "v2", "v3"
+			w.Write([]byte(`["v1", "v2", "v3"]`))
+		case "/v1/registries/reg1/repositories/repo1/v1":
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			// v1 points to abc
+			w.Write([]byte(`{"digest": "sha256:abc", "tags": ["v1"], "size": 100}`))
+		case "/v1/registries/reg1/repositories/repo1/v2":
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			// v2 points to def (new image)
+			w.Write([]byte(`{"digest": "sha256:def", "tags": ["v2"], "size": 200}`))
+		case "/v1/registries/reg1/repositories/repo1/v3":
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Docker-Content-Digest", "sha256:ghi")
+			w.WriteHeader(http.StatusOK)
+			// v3 points to ghi (new image), missing body digest
+			w.Write([]byte(`{"tags": ["v3"], "size": 300}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
+	images, err := svc.ListImages(context.Background(), "fake-token", "reg1", "repo1")
+
+	assert.NoError(t, err)
+	assert.Len(t, images, 3)
+
+	// Check image abc
+	var imgAbc *repository.Image
+	var imgDef *repository.Image
+	var imgGhi *repository.Image
+
+	for _, img := range images {
+		if img.Digest == "sha256:abc" {
+			imgAbc = img
+		} else if img.Digest == "sha256:def" {
+			imgDef = img
+		} else if img.Digest == "sha256:ghi" {
+			imgGhi = img
+		}
+	}
+
+	assert.NotNil(t, imgAbc)
+	assert.Contains(t, imgAbc.Tags, "v1")
+
+	assert.NotNil(t, imgDef)
+	assert.Contains(t, imgDef.Tags, "v2")
+	assert.Equal(t, int64(200), imgDef.Size)
+
+	assert.NotNil(t, imgGhi)
+	assert.Contains(t, imgGhi.Tags, "v3")
+	assert.Equal(t, int64(300), imgGhi.Size)
 }
 
 func TestDeleteRegistry(t *testing.T) {
