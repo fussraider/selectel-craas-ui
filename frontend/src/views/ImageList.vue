@@ -149,6 +149,7 @@ const copyToClipboard = (text: string) => {
 </script>
 
 <style scoped lang="scss">
+@use "sass:color";
 @use '@/assets/main.scss' as *;
 
 .view-container {
@@ -303,7 +304,7 @@ const copyToClipboard = (text: string) => {
     font-size: 0.9rem;
 
     &:hover {
-        background-color: darken($danger-color, 10%);
+        background-color: color.adjust($danger-color, $lightness: -10%);
     }
 }
 
@@ -367,7 +368,7 @@ const copyToClipboard = (text: string) => {
         color: $text-color;
 
         &:hover {
-            background: darken(#e9ecef, 5%);
+            background: color.adjust(#e9ecef, $lightness: -5%);
         }
     }
 
@@ -376,7 +377,7 @@ const copyToClipboard = (text: string) => {
         color: white;
 
         &:hover {
-            background: darken($danger-color, 10%);
+            background: color.adjust($danger-color, $lightness: -10%);
         }
     }
 }
