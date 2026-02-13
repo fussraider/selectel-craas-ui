@@ -3,9 +3,24 @@
     <div class="header">
       <h1>Images ({{ rname }})</h1>
     </div>
+
     <div v-if="store.loading" class="loading">Loading images...</div>
-    <div v-else-if="store.error" class="error">{{ store.error }}</div>
-    <div v-else class="list-container">
+
+    <!-- Toast Notifications -->
+    <ToastNotification
+      v-if="store.error"
+      type="error"
+      :message="store.error"
+      @close="store.clearNotifications"
+    />
+    <ToastNotification
+      v-if="store.success"
+      type="success"
+      :message="store.success"
+      @close="store.clearNotifications"
+    />
+
+    <div v-if="!store.loading" class="list-container">
       <div class="list-controls" v-if="store.images.length > 0">
          <div class="select-all">
             <input type="checkbox" id="selectAll" :checked="allSelected" @change="toggleSelectAll" />
@@ -75,6 +90,7 @@
 import { useRegistryStore } from '@/stores/registry'
 import { onMounted, computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import ToastNotification from '@/components/ToastNotification.vue'
 
 const route = useRoute()
 const store = useRegistryStore()
@@ -130,7 +146,7 @@ const executeBulkDelete = async () => {
         selectedImages.value.clear()
         closeModal()
     } catch (err) {
-        // Error is handled in store, displayed in UI
+        // Error is handled in store, displayed in UI via Toast
         closeModal()
     }
 }
@@ -171,9 +187,9 @@ const copyToClipboard = (text: string) => {
   border-radius: 8px;
   padding: 1.5rem;
   display: flex;
-  justify-content: flex-start; // Changed from space-between
+  justify-content: flex-start;
   align-items: flex-start;
-  gap: 1.25rem; // Add gap for spacing
+  gap: 1.25rem;
   transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
 
   &:hover {
@@ -187,8 +203,8 @@ const copyToClipboard = (text: string) => {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    flex: 1; // Take up remaining space
-    min-width: 0; // Allow shrinking for text overflow
+    flex: 1;
+    min-width: 0;
 }
 
 .digest-row {
@@ -201,7 +217,7 @@ const copyToClipboard = (text: string) => {
     font-family: monospace;
     font-weight: bold;
     color: $text-color;
-    word-break: break-all; // Handle long hashes
+    word-break: break-all;
     font-size: 0.9rem;
 }
 
@@ -256,7 +272,7 @@ const copyToClipboard = (text: string) => {
   border-radius: 4px;
   transition: background-color 0.2s;
   margin-top: -0.25rem;
-  flex: 0 0 auto; // Prevent shrinking
+  flex: 0 0 auto;
 
   &:hover {
     background-color: rgba(220, 53, 69, 0.1);
@@ -280,7 +296,7 @@ const copyToClipboard = (text: string) => {
     border: 1px solid $border-color;
     border-radius: 6px;
     margin-bottom: 0.5rem;
-    min-height: 48px; // Prevent layout shift when delete button appears
+    min-height: 48px;
 }
 
 .select-all {
@@ -291,10 +307,10 @@ const copyToClipboard = (text: string) => {
 }
 
 .checkbox-container {
-    flex: 0 0 auto; // Prevent shrinking or growing
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
-    padding-top: 0.25rem; // Visual alignment
+    padding-top: 0.25rem;
 }
 
 .bulk-delete-btn {
