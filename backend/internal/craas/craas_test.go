@@ -85,8 +85,8 @@ func TestListImages_MissingTags(t *testing.T) {
 		case "/v1/registries/reg1/repositories/repo1/tags":
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			// Returns "v1", "v2", "v3"
-			w.Write([]byte(`["v1", "v2", "v3"]`))
+			// Returns "v1", "v2", "v3", "v4-list"
+			w.Write([]byte(`["v1", "v2", "v3", "v4-list"]`))
 		case "/v1/registries/reg1/repositories/repo1/v1":
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
@@ -103,6 +103,12 @@ func TestListImages_MissingTags(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			// v3 points to ghi (new image), missing body digest
 			w.Write([]byte(`{"tags": ["v3"], "size": 300}`))
+		case "/v1/registries/reg1/repositories/repo1/v4-list":
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Docker-Content-Digest", "sha256:jkl")
+			w.WriteHeader(http.StatusOK)
+			// v4-list is a manifest list returned as an array (what the user is experiencing)
+			w.Write([]byte(`[{"digest": "sha256:sub1", "size": 100}, {"digest": "sha256:sub2", "size": 200}]`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -113,12 +119,13 @@ func TestListImages_MissingTags(t *testing.T) {
 	images, err := svc.ListImages(context.Background(), "fake-token", "reg1", "repo1")
 
 	assert.NoError(t, err)
-	assert.Len(t, images, 3)
+	assert.Len(t, images, 4) // Expect 4 images now: abc, def, ghi, jkl
 
 	// Check image abc
 	var imgAbc *repository.Image
 	var imgDef *repository.Image
 	var imgGhi *repository.Image
+	var imgJkl *repository.Image
 
 	for _, img := range images {
 		if img.Digest == "sha256:abc" {
@@ -127,6 +134,8 @@ func TestListImages_MissingTags(t *testing.T) {
 			imgDef = img
 		} else if img.Digest == "sha256:ghi" {
 			imgGhi = img
+		} else if img.Digest == "sha256:jkl" {
+			imgJkl = img
 		}
 	}
 
@@ -140,6 +149,9 @@ func TestListImages_MissingTags(t *testing.T) {
 	assert.NotNil(t, imgGhi)
 	assert.Contains(t, imgGhi.Tags, "v3")
 	assert.Equal(t, int64(300), imgGhi.Size)
+
+    assert.NotNil(t, imgJkl)
+    assert.Contains(t, imgJkl.Tags, "v4-list")
 }
 
 func TestDeleteRegistry(t *testing.T) {
