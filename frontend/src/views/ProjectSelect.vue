@@ -41,7 +41,7 @@ onMounted(() => {
 }
 
 .project-card {
-  background: white;
+  background: $card-bg;
   border: 1px solid $border-color;
   border-radius: 8px;
   padding: 1.5rem;
@@ -55,9 +55,9 @@ onMounted(() => {
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     border-color: $primary-color;
-    background-color: #fff;
+    background-color: $control-bg;
     text-decoration: none;
   }
 
@@ -72,9 +72,12 @@ onMounted(() => {
     font-size: 0.875rem;
     color: $secondary-color;
     font-family: monospace;
-    background: #f1f1f1;
+    background: $muted-bg;
+    color: $text-color;
     padding: 0.2rem 0.4rem;
     border-radius: 4px;
+    word-break: break-all;
+    max-width: 100%;
   }
 }
 </style>

@@ -166,7 +166,7 @@ const copyToClipboard = (text: string) => {
 }
 
 .list-item {
-  background: white;
+  background: $card-bg;
   border: 1px solid $border-color;
   border-radius: 6px;
   padding: 1.25rem;
@@ -177,7 +177,7 @@ const copyToClipboard = (text: string) => {
   transition: box-shadow 0.2s;
 
   &:hover {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   }
 }
 
@@ -225,8 +225,8 @@ const copyToClipboard = (text: string) => {
 }
 
 .tag {
-  background-color: #e9ecef;
-  color: #495057;
+  background-color: $muted-bg;
+  color: $text-color;
   padding: 0.2rem 0.6rem;
   border-radius: 1rem;
   font-size: 0.85rem;
@@ -274,10 +274,11 @@ const copyToClipboard = (text: string) => {
     justify-content: space-between;
     align-items: center;
     padding: 0.5rem 1rem;
-    background: #f8f9fa;
+    background: $control-bg;
     border: 1px solid $border-color;
     border-radius: 6px;
     margin-bottom: 0.5rem;
+    min-height: 48px; // Prevent layout shift when delete button appears
 }
 
 .select-all {
@@ -312,12 +313,14 @@ const copyToClipboard = (text: string) => {
     border: none;
     border-radius: 8px;
     padding: 0;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     max-width: 500px;
     width: 90%;
+    background: $modal-bg;
+    color: $text-color;
 
     &::backdrop {
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.7);
     }
 }
 
@@ -364,11 +367,11 @@ const copyToClipboard = (text: string) => {
     }
 
     .cancel-btn {
-        background: #e9ecef;
+        background: $muted-bg;
         color: $text-color;
 
         &:hover {
-            background: color.adjust(#e9ecef, $lightness: -5%);
+            background: color.adjust($muted-bg, $lightness: -10%);
         }
     }
 

@@ -65,7 +65,7 @@ const deleteReg = async (rid: string) => {
 }
 
 .list-item {
-  background: white;
+  background: $card-bg;
   border: 1px solid $border-color;
   border-radius: 6px;
   padding: 1.25rem;
@@ -75,7 +75,7 @@ const deleteReg = async (rid: string) => {
   transition: box-shadow 0.2s;
 
   &:hover {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   }
 }
 
@@ -106,18 +106,18 @@ const deleteReg = async (rid: string) => {
     font-weight: bold;
 
     &.active {
-        background-color: #d4edda;
-        color: #155724;
+        background-color: #198754;
+        color: #fff;
     }
 
     &.creating {
-        background-color: #fff3cd;
-        color: #856404;
+        background-color: #ffc107;
+        color: #212529;
     }
 
     &.error {
-        background-color: #f8d7da;
-        color: #721c24;
+        background-color: #dc3545;
+        color: #fff;
     }
 }
 
