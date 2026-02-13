@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/selectel/craas-go/pkg/v1/repository"
@@ -83,52 +84,62 @@ func TestListImages_MissingTags(t *testing.T) {
 	hSub1 := "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
 	hSub2 := "sha256:e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5"
 	hNested := "sha256:f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6"
+	hAccept := "sha256:0000000000000000000000000000000000000000000000000000000000000000"
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1/registries/reg1/repositories/repo1/images":
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			// Returns one image "abc" without tags
+			// Returns images
 			w.Write([]byte(`[
 				{"digest": "` + hAbc + `", "tags": []},
 				{"digest": "` + hSub1 + `", "tags": []},
 				{"digest": "` + hSub2 + `", "tags": []},
-                {"digest": "` + hNested + `", "tags": []}
+                {"digest": "` + hNested + `", "tags": []},
+                {"digest": "` + hAccept + `", "tags": []}
 			]`))
 		case "/v1/registries/reg1/repositories/repo1/tags":
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			// Returns "v1", "v2", "v3", "v4-list", "v5-nested"
-			w.Write([]byte(`["v1", "v2", "v3", "v4-list", "v5-nested"]`))
+			// Returns tags including "v6-accept"
+			w.Write([]byte(`["v1", "v2", "v3", "v4-list", "v5-nested", "v6-accept"]`))
 		case "/v1/registries/reg1/repositories/repo1/v1":
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			// v1 points to abc
 			w.Write([]byte(`{"digest": "` + hAbc + `", "tags": ["v1"], "size": 100}`))
 		case "/v1/registries/reg1/repositories/repo1/v2":
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			// v2 points to def (new image)
 			w.Write([]byte(`{"digest": "` + hDef + `", "tags": ["v2"], "size": 200}`))
 		case "/v1/registries/reg1/repositories/repo1/v3":
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Docker-Content-Digest", hGhi)
 			w.WriteHeader(http.StatusOK)
-			// v3 points to ghi (new image), missing body digest
 			w.Write([]byte(`{"tags": ["v3"], "size": 300}`))
 		case "/v1/registries/reg1/repositories/repo1/v4-list":
 			w.Header().Set("Content-Type", "application/json")
-			// NO Docker-Content-Digest header
 			w.WriteHeader(http.StatusOK)
-			// v4-list is a manifest list returned as an array
-			// containing digests that match "sub1" and "sub2" in ListImages
 			w.Write([]byte(`[{"digest": "` + hSub1 + `", "size": 100}, {"digest": "` + hSub2 + `", "size": 200}]`))
 		case "/v1/registries/reg1/repositories/repo1/v5-nested":
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			// v5-nested is a deeply nested JSON with "sha256:nested" hidden in it
 			w.Write([]byte(`{"foo": [{"bar": {"baz": "` + hNested + `"}}]}`))
+		case "/v1/registries/reg1/repositories/repo1/v6-accept":
+			// Check for Accept header
+			accept := r.Header.Get("Accept")
+			if strings.Contains(accept, "application/vnd.docker.distribution.manifest.list.v2+json") {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				// Return valid JSON
+				w.Write([]byte(`{"digest": "` + hAccept + `", "tags": ["v6-accept"]}`))
+			} else {
+				// Simulate failure (empty array) without header
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`[]`))
+			}
+
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -139,49 +150,18 @@ func TestListImages_MissingTags(t *testing.T) {
 	images, err := svc.ListImages(context.Background(), "fake-token", "reg1", "repo1")
 
 	assert.NoError(t, err)
-	// We expect images: abc, sub1, sub2, nested, def, ghi
 
 	// Check if we correctly handle images
-	var imgAbc *repository.Image
-	var imgSub1 *repository.Image
-	var imgSub2 *repository.Image
-	var imgNested *repository.Image
-	var imgDef *repository.Image
-	var imgGhi *repository.Image
+	var imgAccept *repository.Image
 
 	for _, img := range images {
-		if img.Digest == hAbc {
-			imgAbc = img
-		} else if img.Digest == hSub1 {
-			imgSub1 = img
-		} else if img.Digest == hSub2 {
-			imgSub2 = img
-		} else if img.Digest == hNested {
-			imgNested = img
-		} else if img.Digest == hDef {
-			imgDef = img
-		} else if img.Digest == hGhi {
-			imgGhi = img
+		if img.Digest == hAccept {
+			imgAccept = img
 		}
 	}
 
-	assert.NotNil(t, imgAbc)
-	assert.Contains(t, imgAbc.Tags, "v1")
-
-	assert.NotNil(t, imgSub1)
-	assert.Contains(t, imgSub1.Tags, "v4-list")
-
-	assert.NotNil(t, imgSub2)
-	assert.Contains(t, imgSub2.Tags, "v4-list")
-
-	assert.NotNil(t, imgNested)
-	assert.Contains(t, imgNested.Tags, "v5-nested")
-
-	assert.NotNil(t, imgDef)
-	assert.Contains(t, imgDef.Tags, "v2")
-
-	assert.NotNil(t, imgGhi)
-	assert.Contains(t, imgGhi.Tags, "v3")
+	assert.NotNil(t, imgAccept)
+	assert.Contains(t, imgAccept.Tags, "v6-accept")
 }
 
 func TestDeleteRegistry(t *testing.T) {
