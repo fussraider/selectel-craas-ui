@@ -1,13 +1,13 @@
 package craas
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"sync"
 	"time"
 
@@ -122,7 +122,7 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 				defer wg.Done()
 				defer func() { <-sem }() // Release token
 
-				// Fetch all digests associated with the tag (could be one or multiple if manifest list)
+				// Fetch all digests associated with the tag
 				digests, err := s.fetchImageDigests(ctx, httpClient, token, registryID, repoName, tag)
 				if err != nil {
 					s.logger.Warn("failed to fetch digests for tag", "tag", tag, "error", err)
@@ -147,20 +147,8 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 							existingImg.Tags = append(existingImg.Tags, tag)
 						}
 					} else {
-						// New image found (this happens if we found a digest that wasn't in the original list,
-						// e.g. if the original list filtered out some platforms but we want to show it now,
-						// or more likely, we found a digest for a single-arch image that was missing tags)
-						//
-						// However, if we found a manifest list digest but don't have the image object,
-						// we might want to add a placeholder. But usually ListImages returns the artifacts.
-						//
-						// If we have a digest but no image object, let's create a minimal one.
-						// Note: fetchImageDigests doesn't return full image metadata, just digest.
-						// If we need metadata, we'd need another call or change the return type.
-						// For now, let's create a placeholder if it's a completely new digest.
-						// But usually we just want to tag existing things.
-						// If it's a new digest, let's add it.
-
+						// New image found with this digest.
+						// We create a minimal entry for it.
 						newImg := &repository.Image{
 							Digest:    digest,
 							Tags:      []string{tag},
@@ -179,9 +167,12 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 	return images, nil
 }
 
+// digestRegex matches standard SHA256 digests.
+var digestRegex = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)
+
 // fetchImageDigests fetches the digest(s) associated with a tag.
-// Returns a slice of digests. If it's a single image, returns one digest.
-// If it's a manifest list, returns digests of all referenced manifests.
+// Returns a slice of digests found in the response (header or body).
+// It recursively searches the JSON body for any string that matches a SHA256 digest format.
 func (s *Service) fetchImageDigests(ctx context.Context, client *http.Client, token, registryID, repoName, reference string) ([]string, error) {
 	url := fmt.Sprintf("%s/registries/%s/repositories/%s/%s", s.endpoint, registryID, repoName, reference)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -206,59 +197,59 @@ func (s *Service) fetchImageDigests(ctx context.Context, client *http.Client, to
 	}
 
 	var digests []string
+	digestSet := make(map[string]struct{})
 
-	// Check header first
+	// 1. Check Header
 	headerDigest := resp.Header.Get("Docker-Content-Digest")
 	if headerDigest != "" {
 		digests = append(digests, headerDigest)
+		digestSet[headerDigest] = struct{}{}
 	}
 
-	// Check body
-	trimmedBody := bytes.TrimSpace(bodyBytes)
-	if len(trimmedBody) > 0 {
-		if trimmedBody[0] == '[' {
-			// Array: Manifest List (Selectel specific format likely)
-			var items []struct {
-				Digest string `json:"digest"`
-			}
-			if err := json.Unmarshal(trimmedBody, &items); err != nil {
-				// If we can't parse the array structure, log warn but proceed with header digest if available
-				if len(digests) == 0 {
-					return nil, fmt.Errorf("failed to parse manifest list array: %v", err)
-				}
-				return digests, nil
-			}
-			for _, item := range items {
-				if item.Digest != "" {
-					digests = append(digests, item.Digest)
-				}
-			}
+	// 2. Deep search in JSON body
+	if len(bodyBytes) > 0 {
+		var data interface{}
+		if err := json.Unmarshal(bodyBytes, &data); err == nil {
+			findDigests(data, digestSet, &digests)
 		} else {
-			// Object: Single Manifest or standard Manifest List
-			var img struct {
-				Digest string `json:"digest"`
-			}
-			if err := json.Unmarshal(trimmedBody, &img); err == nil && img.Digest != "" {
-				// Avoid duplicate
-				found := false
-				for _, d := range digests {
-					if d == img.Digest {
-						found = true
-						break
-					}
-				}
-				if !found {
-					digests = append(digests, img.Digest)
-				}
-			}
+			// If not valid JSON, we can't search it structurally.
+			// Maybe regex search on raw bytes if desperate?
+			// Let's stick to structural search for safety first.
 		}
 	}
 
 	if len(digests) == 0 {
+		// Log truncated body for debugging
+		maxLog := 512
+		if len(bodyBytes) < maxLog {
+			maxLog = len(bodyBytes)
+		}
+		s.logger.Warn("no digests found in response body", "tag", reference, "body_preview", string(bodyBytes[:maxLog]))
 		return nil, fmt.Errorf("no digests found for tag %s", reference)
 	}
 
 	return digests, nil
+}
+
+// findDigests recursively searches for strings matching digestRegex in the JSON structure.
+func findDigests(data interface{}, seen map[string]struct{}, result *[]string) {
+	switch v := data.(type) {
+	case string:
+		if digestRegex.MatchString(v) {
+			if _, ok := seen[v]; !ok {
+				seen[v] = struct{}{}
+				*result = append(*result, v)
+			}
+		}
+	case []interface{}:
+		for _, item := range v {
+			findDigests(item, seen, result)
+		}
+	case map[string]interface{}:
+		for _, value := range v {
+			findDigests(value, seen, result)
+		}
+	}
 }
 
 // ListTags returns a list of tags in the repository.
