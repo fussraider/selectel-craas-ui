@@ -56,6 +56,7 @@ const breadcrumbs = computed(() => {
 </script>
 
 <style scoped lang="scss">
+@use "sass:color";
 @use '@/assets/main.scss' as *;
 
 .app-layout {
@@ -65,22 +66,29 @@ const breadcrumbs = computed(() => {
 }
 
 .app-header {
-  background-color: #343a40;
-  color: white;
+  background-color: rgba($card-bg, 0.95);
+  backdrop-filter: blur(10px);
+  color: $text-color;
   padding: 1rem 2rem;
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid $border-color;
+  position: sticky;
+  top: 0;
+  z-index: 50;
 
   .logo a {
-    color: white;
+    color: $primary-color;
     font-size: 1.5rem;
-    font-weight: bold;
+    font-weight: 700;
     text-decoration: none;
+    background: linear-gradient(135deg, $primary-color, color.adjust($primary-color, $lightness: 20%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 
     &:hover {
-        text-decoration: none;
-        opacity: 0.9;
+        opacity: 0.8;
     }
   }
 }
@@ -97,19 +105,19 @@ const breadcrumbs = computed(() => {
   margin-bottom: 1.5rem;
   font-size: 0.95rem;
   color: $secondary-color;
-  background: white;
+  background: $card-bg;
   padding: 0.75rem 1rem;
   border-radius: 4px;
   border: 1px solid $border-color;
 
   a {
-    color: $primary-color;
+    color: #6ea8fe;
     font-weight: 500;
   }
 
   .separator {
     margin: 0 0.5rem;
-    color: #ccc;
+    color: $secondary-color;
   }
 }
 </style>

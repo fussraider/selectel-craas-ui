@@ -66,7 +66,7 @@ const deleteRepo = async (rname: string) => {
 }
 
 .list-item {
-  background: white;
+  background: $card-bg;
   border: 1px solid $border-color;
   border-radius: 6px;
   padding: 1.25rem;
@@ -76,7 +76,7 @@ const deleteRepo = async (rname: string) => {
   transition: box-shadow 0.2s;
 
   &:hover {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   }
 }
 
