@@ -40,11 +40,51 @@ type Project struct {
 func New(cfg *config.Config, logger *slog.Logger) *Client {
 	return &Client{
 		cfg:           cfg,
-		client:        &http.Client{Timeout: 10 * time.Second},
+		client:        &http.Client{Timeout: 60 * time.Second},
 		AuthURL:       "https://cloud.api.selcloud.ru/identity/v3/auth/tokens",
 		ProjURL:       "https://cloud.api.selcloud.ru/identity/v3/auth/projects",
 		projectTokens: make(map[string]string),
 		logger:        logger.With("service", "auth"),
+	}
+}
+
+func (c *Client) getAuthPayload(projectID string) map[string]interface{} {
+	userAuth := map[string]interface{}{
+		"methods": []string{"password"},
+		"password": map[string]interface{}{
+			"user": map[string]interface{}{
+				"name": c.cfg.SelectelUsername,
+				"domain": map[string]interface{}{
+					"name": c.cfg.SelectelAccountID,
+				},
+				"password": c.cfg.SelectelPassword,
+			},
+		},
+	}
+
+	var scope map[string]interface{}
+	if projectID != "" {
+		scope = map[string]interface{}{
+			"project": map[string]interface{}{
+				"id": projectID,
+			},
+		}
+	} else {
+		scope = map[string]interface{}{
+			"project": map[string]interface{}{
+				"name": c.cfg.SelectelProjectName,
+				"domain": map[string]interface{}{
+					"name": c.cfg.SelectelAccountID,
+				},
+			},
+		}
+	}
+
+	return map[string]interface{}{
+		"auth": map[string]interface{}{
+			"identity": userAuth,
+			"scope":    scope,
+		},
 	}
 }
 
@@ -60,32 +100,7 @@ func (c *Client) GetAccountToken() (string, error) {
 
 	c.logger.Debug("requesting new account token")
 
-	payload := map[string]interface{}{
-		"auth": map[string]interface{}{
-			"identity": map[string]interface{}{
-				"methods": []string{"password"},
-				"password": map[string]interface{}{
-					"user": map[string]interface{}{
-						"name": c.cfg.SelectelUsername,
-						"domain": map[string]interface{}{
-							"name": c.cfg.SelectelAccountID,
-						},
-						"password": c.cfg.SelectelPassword,
-					},
-				},
-			},
-			"scope": map[string]interface{}{
-				"project": map[string]interface{}{
-					"name": c.cfg.SelectelProjectName,
-					"domain": map[string]interface{}{
-						"name": c.cfg.SelectelAccountID,
-					},
-				},
-			},
-		},
-	}
-
-	token, err := c.requestToken(payload)
+	token, err := c.requestToken(c.getAuthPayload(""))
 	if err != nil {
 		c.logger.Error("failed to get account token", "error", err)
 		return "", err
@@ -117,32 +132,7 @@ func (c *Client) GetProjectToken(projectID string) (string, error) {
 
 	c.logger.Debug("requesting new project token", "project_id", projectID)
 
-	payload := map[string]interface{}{
-		"auth": map[string]interface{}{
-			"identity": map[string]interface{}{
-				"methods": []string{"password"},
-				"password": map[string]interface{}{
-					"user": map[string]interface{}{
-						"name": c.cfg.SelectelUsername,
-						"domain": map[string]interface{}{
-							"name": c.cfg.SelectelAccountID,
-						},
-						"password": c.cfg.SelectelPassword,
-					},
-				},
-			},
-			"scope": map[string]interface{}{
-				"project": map[string]interface{}{
-					"name": c.cfg.SelectelProjectName,
-					"domain": map[string]interface{}{
-						"name": c.cfg.SelectelAccountID,
-					},
-				},
-			},
-		},
-	}
-
-	token, err := c.requestToken(payload)
+	token, err := c.requestToken(c.getAuthPayload(projectID))
 	if err != nil {
 		c.logger.Error("failed to get project token", "project_id", projectID, "error", err)
 		return "", err
