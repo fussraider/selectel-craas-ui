@@ -65,15 +65,15 @@ const breadcrumbs = computed(() => {
 }
 
 .app-header {
-  background-color: #343a40;
-  color: white;
+  background-color: $card-bg;
+  color: $text-color;
   padding: 1rem 2rem;
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 
   .logo a {
-    color: white;
+    color: $text-color;
     font-size: 1.5rem;
     font-weight: bold;
     text-decoration: none;
@@ -97,19 +97,19 @@ const breadcrumbs = computed(() => {
   margin-bottom: 1.5rem;
   font-size: 0.95rem;
   color: $secondary-color;
-  background: white;
+  background: $card-bg;
   padding: 0.75rem 1rem;
   border-radius: 4px;
   border: 1px solid $border-color;
 
   a {
-    color: $primary-color;
+    color: #6ea8fe;
     font-weight: 500;
   }
 
   .separator {
     margin: 0 0.5rem;
-    color: #ccc;
+    color: $secondary-color;
   }
 }
 </style>
