@@ -2,7 +2,11 @@ package craas
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"net/http"
+	"sync"
 	"time"
 
 	v1 "github.com/selectel/craas-go/pkg"
@@ -71,8 +75,129 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 		s.logger.Error("failed to list images", "registry_id", registryID, "repository", repoName, "error", err)
 		return nil, err
 	}
+
+	// Fetch all tags to check for missing ones
+	allTags, _, err := repository.ListTags(ctx, client, registryID, repoName)
+	if err != nil {
+		s.logger.Warn("failed to list tags for verification", "registry_id", registryID, "repository", repoName, "error", err)
+		return images, nil
+	}
+
+	// Create a map of existing images by digest
+	imageMap := make(map[string]*repository.Image)
+	knownTags := make(map[string]struct{})
+	for _, img := range images {
+		imageMap[img.Digest] = img
+		for _, t := range img.Tags {
+			knownTags[t] = struct{}{}
+		}
+	}
+
+	// Identify missing tags
+	var missingTags []string
+	for _, t := range allTags {
+		if _, ok := knownTags[t]; !ok {
+			missingTags = append(missingTags, t)
+		}
+	}
+
+	if len(missingTags) > 0 {
+		s.logger.Info("found missing tags, resolving", "count", len(missingTags), "tags", missingTags)
+
+		// Resolve missing tags concurrently
+		var wg sync.WaitGroup
+		sem := make(chan struct{}, 5) // Limit to 5 concurrent requests
+		var mu sync.Mutex
+
+		httpClient := &http.Client{
+			Timeout: 10 * time.Second,
+		}
+
+		for _, tag := range missingTags {
+			wg.Add(1)
+			sem <- struct{}{} // Acquire token
+			go func(tag string) {
+				defer wg.Done()
+				defer func() { <-sem }() // Release token
+
+				img, err := s.fetchImageManifest(ctx, httpClient, token, registryID, repoName, tag)
+				if err != nil {
+					s.logger.Warn("failed to fetch manifest for tag", "tag", tag, "error", err)
+					return
+				}
+
+				mu.Lock()
+				defer mu.Unlock()
+
+				// Check if we already have this image (by digest)
+				if existingImg, ok := imageMap[img.Digest]; ok {
+					// Add the tag to the existing image
+					exists := false
+					for _, t := range existingImg.Tags {
+						if t == tag {
+							exists = true
+							break
+						}
+					}
+					if !exists {
+						existingImg.Tags = append(existingImg.Tags, tag)
+					}
+				} else {
+					// New image found (e.g. manifest list)
+					// Ensure the image has the tag
+					hasTag := false
+					for _, t := range img.Tags {
+						if t == tag {
+							hasTag = true
+							break
+						}
+					}
+					if !hasTag {
+						img.Tags = append(img.Tags, tag)
+					}
+
+					images = append(images, img)
+					imageMap[img.Digest] = img
+				}
+			}(tag)
+		}
+		wg.Wait()
+	}
+
 	s.logger.Info("listed images", "registry_id", registryID, "repository", repoName, "count", len(images), "duration", duration)
 	return images, nil
+}
+
+// fetchImageManifest fetches the image manifest details for a given tag/digest.
+func (s *Service) fetchImageManifest(ctx context.Context, client *http.Client, token, registryID, repoName, reference string) (*repository.Image, error) {
+	url := fmt.Sprintf("%s/registries/%s/repositories/%s/%s", s.endpoint, registryID, repoName, reference)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("X-Auth-Token", token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var img repository.Image
+	if err := json.NewDecoder(resp.Body).Decode(&img); err != nil {
+		return nil, err
+	}
+
+	// Fallback to header if body digest is empty
+	if img.Digest == "" {
+		img.Digest = resp.Header.Get("Docker-Content-Digest")
+	}
+
+	return &img, nil
 }
 
 // ListTags returns a list of tags in the repository.
