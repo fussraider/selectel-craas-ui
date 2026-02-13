@@ -122,44 +122,53 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 				defer wg.Done()
 				defer func() { <-sem }() // Release token
 
-				img, err := s.fetchImageManifest(ctx, httpClient, token, registryID, repoName, tag)
+				// Fetch all digests associated with the tag (could be one or multiple if manifest list)
+				digests, err := s.fetchImageDigests(ctx, httpClient, token, registryID, repoName, tag)
 				if err != nil {
-					s.logger.Warn("failed to fetch manifest for tag", "tag", tag, "error", err)
+					s.logger.Warn("failed to fetch digests for tag", "tag", tag, "error", err)
 					return
 				}
 
 				mu.Lock()
 				defer mu.Unlock()
 
-				// Check if we already have this image (by digest)
-				if existingImg, ok := imageMap[img.Digest]; ok {
-					// Add the tag to the existing image
-					exists := false
-					for _, t := range existingImg.Tags {
-						if t == tag {
-							exists = true
-							break
+				for _, digest := range digests {
+					// Check if we already have this image (by digest)
+					if existingImg, ok := imageMap[digest]; ok {
+						// Add the tag to the existing image
+						exists := false
+						for _, t := range existingImg.Tags {
+							if t == tag {
+								exists = true
+								break
+							}
 						}
-					}
-					if !exists {
-						existingImg.Tags = append(existingImg.Tags, tag)
-					}
-				} else {
-					// New image found (e.g. manifest list)
-					// Ensure the image has the tag
-					hasTag := false
-					for _, t := range img.Tags {
-						if t == tag {
-							hasTag = true
-							break
+						if !exists {
+							existingImg.Tags = append(existingImg.Tags, tag)
 						}
-					}
-					if !hasTag {
-						img.Tags = append(img.Tags, tag)
-					}
+					} else {
+						// New image found (this happens if we found a digest that wasn't in the original list,
+						// e.g. if the original list filtered out some platforms but we want to show it now,
+						// or more likely, we found a digest for a single-arch image that was missing tags)
+						//
+						// However, if we found a manifest list digest but don't have the image object,
+						// we might want to add a placeholder. But usually ListImages returns the artifacts.
+						//
+						// If we have a digest but no image object, let's create a minimal one.
+						// Note: fetchImageDigests doesn't return full image metadata, just digest.
+						// If we need metadata, we'd need another call or change the return type.
+						// For now, let's create a placeholder if it's a completely new digest.
+						// But usually we just want to tag existing things.
+						// If it's a new digest, let's add it.
 
-					images = append(images, img)
-					imageMap[img.Digest] = img
+						newImg := &repository.Image{
+							Digest:    digest,
+							Tags:      []string{tag},
+							CreatedAt: time.Now(), // Unknown
+						}
+						images = append(images, newImg)
+						imageMap[digest] = newImg
+					}
 				}
 			}(tag)
 		}
@@ -170,8 +179,10 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 	return images, nil
 }
 
-// fetchImageManifest fetches the image manifest details for a given tag/digest.
-func (s *Service) fetchImageManifest(ctx context.Context, client *http.Client, token, registryID, repoName, reference string) (*repository.Image, error) {
+// fetchImageDigests fetches the digest(s) associated with a tag.
+// Returns a slice of digests. If it's a single image, returns one digest.
+// If it's a manifest list, returns digests of all referenced manifests.
+func (s *Service) fetchImageDigests(ctx context.Context, client *http.Client, token, registryID, repoName, reference string) ([]string, error) {
 	url := fmt.Sprintf("%s/registries/%s/repositories/%s/%s", s.endpoint, registryID, repoName, reference)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -189,49 +200,65 @@ func (s *Service) fetchImageManifest(ctx context.Context, client *http.Client, t
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	// Read body first to inspect content
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	// Fallback to header digest first
+	var digests []string
+
+	// Check header first
 	headerDigest := resp.Header.Get("Docker-Content-Digest")
+	if headerDigest != "" {
+		digests = append(digests, headerDigest)
+	}
 
-	var img repository.Image
-
-	// Check if body is an array (JSON starts with '[')
+	// Check body
 	trimmedBody := bytes.TrimSpace(bodyBytes)
-	if len(trimmedBody) > 0 && trimmedBody[0] == '[' {
-		// It's a list (likely a manifest list/index).
-		// We don't have a struct for list items, so we just use the header digest
-		// and maybe extract timestamp from the first item if possible, or just default.
-		// For now, let's just create a dummy image with the digest from header.
-		if headerDigest == "" {
-			return nil, fmt.Errorf("manifest list received but no Docker-Content-Digest header found")
-		}
-
-		// Try to decode as a list of generic maps to find something useful if needed
-		// But strictly speaking, for UI list, we just need Digest and Tags (tags handled by caller)
-		// Size might be sum of parts, or size of the list manifest itself.
-		// Let's assume size 0 or try to parse.
-		img.Digest = headerDigest
-		img.CreatedAt = time.Now() // Approximate, or we could parse
-		// We can try to decode into a slice of struct { Size int64 } to sum up size?
-		// Let's keep it simple for now to fix the crash.
-
-	} else {
-		// Try to decode as single image object
-		if err := json.Unmarshal(bodyBytes, &img); err != nil {
-			return nil, err
+	if len(trimmedBody) > 0 {
+		if trimmedBody[0] == '[' {
+			// Array: Manifest List (Selectel specific format likely)
+			var items []struct {
+				Digest string `json:"digest"`
+			}
+			if err := json.Unmarshal(trimmedBody, &items); err != nil {
+				// If we can't parse the array structure, log warn but proceed with header digest if available
+				if len(digests) == 0 {
+					return nil, fmt.Errorf("failed to parse manifest list array: %v", err)
+				}
+				return digests, nil
+			}
+			for _, item := range items {
+				if item.Digest != "" {
+					digests = append(digests, item.Digest)
+				}
+			}
+		} else {
+			// Object: Single Manifest or standard Manifest List
+			var img struct {
+				Digest string `json:"digest"`
+			}
+			if err := json.Unmarshal(trimmedBody, &img); err == nil && img.Digest != "" {
+				// Avoid duplicate
+				found := false
+				for _, d := range digests {
+					if d == img.Digest {
+						found = true
+						break
+					}
+				}
+				if !found {
+					digests = append(digests, img.Digest)
+				}
+			}
 		}
 	}
 
-	if img.Digest == "" {
-		img.Digest = headerDigest
+	if len(digests) == 0 {
+		return nil, fmt.Errorf("no digests found for tag %s", reference)
 	}
 
-	return &img, nil
+	return digests, nil
 }
 
 // ListTags returns a list of tags in the repository.
