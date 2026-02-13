@@ -1,9 +1,11 @@
 package craas
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -187,14 +189,46 @@ func (s *Service) fetchImageManifest(ctx context.Context, client *http.Client, t
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	var img repository.Image
-	if err := json.NewDecoder(resp.Body).Decode(&img); err != nil {
+	// Read body first to inspect content
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
 		return nil, err
 	}
 
-	// Fallback to header if body digest is empty
+	// Fallback to header digest first
+	headerDigest := resp.Header.Get("Docker-Content-Digest")
+
+	var img repository.Image
+
+	// Check if body is an array (JSON starts with '[')
+	trimmedBody := bytes.TrimSpace(bodyBytes)
+	if len(trimmedBody) > 0 && trimmedBody[0] == '[' {
+		// It's a list (likely a manifest list/index).
+		// We don't have a struct for list items, so we just use the header digest
+		// and maybe extract timestamp from the first item if possible, or just default.
+		// For now, let's just create a dummy image with the digest from header.
+		if headerDigest == "" {
+			return nil, fmt.Errorf("manifest list received but no Docker-Content-Digest header found")
+		}
+
+		// Try to decode as a list of generic maps to find something useful if needed
+		// But strictly speaking, for UI list, we just need Digest and Tags (tags handled by caller)
+		// Size might be sum of parts, or size of the list manifest itself.
+		// Let's assume size 0 or try to parse.
+		img.Digest = headerDigest
+		img.CreatedAt = time.Now() // Approximate, or we could parse
+		// We can try to decode into a slice of struct { Size int64 } to sum up size?
+		// Let's keep it simple for now to fix the crash.
+
+	} else {
+		// Try to decode as single image object
+		if err := json.Unmarshal(bodyBytes, &img); err != nil {
+			return nil, err
+		}
+	}
+
 	if img.Digest == "" {
-		img.Digest = resp.Header.Get("Docker-Content-Digest")
+		img.Digest = headerDigest
 	}
 
 	return &img, nil
