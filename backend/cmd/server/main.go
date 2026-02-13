@@ -29,8 +29,8 @@ func main() {
 	srv := &http.Server{
 		Addr:         ":" + cfg.WebPort,
 		Handler:      router,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  300 * time.Second,
+		WriteTimeout: 300 * time.Second,
 	}
 
 	appLogger.Info("server listening", "addr", srv.Addr)

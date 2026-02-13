@@ -1,0 +1,74 @@
+$primary-color: #007bff;
+$primary-hover: #0056b3;
+$secondary-color: #6c757d;
+$danger-color: #dc3545;
+$danger-hover: #c82333;
+$background-color: #f8f9fa;
+$text-color: #333;
+$border-color: #ddd;
+$font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: $font-family;
+  color: $text-color;
+  background-color: $background-color;
+  line-height: 1.6;
+}
+
+a {
+  color: $primary-color;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  font-style: italic;
+  color: $secondary-color;
+
+  &::after {
+    content: " ";
+    display: block;
+    width: 24px;
+    height: 24px;
+    margin-left: 10px;
+    border-radius: 50%;
+    border: 3px solid $primary-color;
+    border-color: $primary-color transparent $primary-color transparent;
+    animation: lds-dual-ring 1.2s linear infinite;
+  }
+}
+
+@keyframes lds-dual-ring {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+  margin-bottom: 1rem;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
