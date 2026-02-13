@@ -9,6 +9,7 @@ import (
 	"github.com/generic/selectel-craas-web/internal/auth"
 	"github.com/generic/selectel-craas-web/internal/config"
 	"github.com/generic/selectel-craas-web/internal/craas"
+	"github.com/generic/selectel-craas-web/pkg/logger"
 )
 
 func main() {
@@ -17,10 +18,13 @@ func main() {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
-	authClient := auth.New(cfg)
-	craasService := craas.New()
+	appLogger := logger.New(cfg.LogLevel, cfg.LogFormat)
+	appLogger.Info("starting application", "port", cfg.WebPort, "log_level", cfg.LogLevel)
 
-	router := api.New(authClient, craasService)
+	authClient := auth.New(cfg, appLogger)
+	craasService := craas.New(appLogger)
+
+	router := api.New(authClient, craasService, appLogger)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.WebPort,
@@ -29,8 +33,9 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 	}
 
-	log.Printf("Starting server on port %s", cfg.WebPort)
+	appLogger.Info("server listening", "addr", srv.Addr)
 	if err := srv.ListenAndServe(); err != nil {
+		appLogger.Error("server failed", "error", err)
 		log.Fatal(err)
 	}
 }

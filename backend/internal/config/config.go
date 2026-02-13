@@ -12,6 +12,8 @@ type Config struct {
 	SelectelUsername  string
 	SelectelAccountID string
 	SelectelPassword  string
+	LogLevel          string // "debug", "info", "warn", "error"
+	LogFormat         string // "text", "json"
 }
 
 func Load() (*Config, error) {
@@ -25,6 +27,8 @@ func Load() (*Config, error) {
 		SelectelUsername:  getEnv("SELECTEL_USERNAME", ""),
 		SelectelAccountID: getEnv("SELECTEL_ACCOUNT_ID", ""),
 		SelectelPassword:  getEnv("SELECTEL_PASSWORD", ""),
+		LogLevel:          getEnv("LOG_LEVEL", "INFO"),
+		LogFormat:         getEnv("LOG_FORMAT", "TEXT"),
 	}, nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -28,6 +29,7 @@ type Client struct {
 	mu            sync.Mutex
 	accountToken  string
 	projectTokens map[string]string
+	logger        *slog.Logger
 }
 
 type Project struct {
@@ -35,13 +37,14 @@ type Project struct {
 	Name string `json:"name"`
 }
 
-func New(cfg *config.Config) *Client {
+func New(cfg *config.Config, logger *slog.Logger) *Client {
 	return &Client{
 		cfg:           cfg,
 		client:        &http.Client{Timeout: 10 * time.Second},
 		AuthURL:       "https://cloud.api.selcloud.ru/identity/v3/auth/tokens",
 		ProjURL:       "https://cloud.api.selcloud.ru/identity/v3/auth/projects",
 		projectTokens: make(map[string]string),
+		logger:        logger.With("service", "auth"),
 	}
 }
 
@@ -50,9 +53,12 @@ func (c *Client) GetAccountToken() (string, error) {
 	if c.accountToken != "" {
 		token := c.accountToken
 		c.mu.Unlock()
+		c.logger.Debug("cache hit for account token")
 		return token, nil
 	}
 	c.mu.Unlock()
+
+	c.logger.Debug("requesting new account token")
 
 	payload := map[string]interface{}{
 		"auth": map[string]interface{}{
@@ -78,12 +84,15 @@ func (c *Client) GetAccountToken() (string, error) {
 
 	token, err := c.requestToken(payload)
 	if err != nil {
+		c.logger.Error("failed to get account token", "error", err)
 		return "", err
 	}
 
 	c.mu.Lock()
 	c.accountToken = token
 	c.mu.Unlock()
+
+	c.logger.Debug("successfully acquired account token")
 	return token, nil
 }
 
@@ -91,15 +100,19 @@ func (c *Client) InvalidateAccountToken() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.accountToken = ""
+	c.logger.Debug("invalidated account token")
 }
 
 func (c *Client) GetProjectToken(projectID string) (string, error) {
 	c.mu.Lock()
 	if token, ok := c.projectTokens[projectID]; ok {
 		c.mu.Unlock()
+		c.logger.Debug("cache hit for project token", "project_id", projectID)
 		return token, nil
 	}
 	c.mu.Unlock()
+
+	c.logger.Debug("requesting new project token", "project_id", projectID)
 
 	payload := map[string]interface{}{
 		"auth": map[string]interface{}{
@@ -125,12 +138,15 @@ func (c *Client) GetProjectToken(projectID string) (string, error) {
 
 	token, err := c.requestToken(payload)
 	if err != nil {
+		c.logger.Error("failed to get project token", "project_id", projectID, "error", err)
 		return "", err
 	}
 
 	c.mu.Lock()
 	c.projectTokens[projectID] = token
 	c.mu.Unlock()
+
+	c.logger.Debug("successfully acquired project token", "project_id", projectID)
 	return token, nil
 }
 
@@ -138,6 +154,7 @@ func (c *Client) InvalidateProjectToken(projectID string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	delete(c.projectTokens, projectID)
+	c.logger.Debug("invalidated project token", "project_id", projectID)
 }
 
 func (c *Client) requestToken(payload map[string]interface{}) (string, error) {
@@ -152,11 +169,16 @@ func (c *Client) requestToken(payload map[string]interface{}) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
+	start := time.Now()
 	resp, err := c.client.Do(req)
+	duration := time.Since(start)
+
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	c.logger.Debug("token request completed", "status", resp.StatusCode, "duration", duration)
 
 	if resp.StatusCode != http.StatusCreated {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -173,6 +195,7 @@ func (c *Client) requestToken(payload map[string]interface{}) (string, error) {
 
 // ListProjects lists projects accessible by the account token.
 func (c *Client) ListProjects(accountToken string) ([]Project, error) {
+	c.logger.Debug("listing projects")
 	req, err := http.NewRequest("GET", c.ProjURL, nil)
 	if err != nil {
 		return nil, err
@@ -180,11 +203,16 @@ func (c *Client) ListProjects(accountToken string) ([]Project, error) {
 	req.Header.Set("X-Auth-Token", accountToken)
 	req.Header.Set("Content-Type", "application/json")
 
+	start := time.Now()
 	resp, err := c.client.Do(req)
+	duration := time.Since(start)
 	if err != nil {
+		c.logger.Error("failed to list projects request", "error", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	c.logger.Debug("list projects request completed", "status", resp.StatusCode, "duration", duration)
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -198,5 +226,6 @@ func (c *Client) ListProjects(accountToken string) ([]Project, error) {
 		return nil, err
 	}
 
+	c.logger.Info("listed projects", "count", len(result.Projects))
 	return result.Projects, nil
 }

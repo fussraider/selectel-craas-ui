@@ -2,7 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -11,20 +13,22 @@ import (
 )
 
 type Server struct {
-	Auth  *auth.Client
-	Craas *craas.Service
+	Auth   *auth.Client
+	Craas  *craas.Service
+	Logger *slog.Logger
 }
 
-func New(auth *auth.Client, craas *craas.Service) *chi.Mux {
+func New(auth *auth.Client, craas *craas.Service, logger *slog.Logger) *chi.Mux {
 	s := &Server{
-		Auth:  auth,
-		Craas: craas,
+		Auth:   auth,
+		Craas:  craas,
+		Logger: logger.With("service", "api"),
 	}
 
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(enableCORS)
+	r.Use(s.RequestLogger) // Custom Logger
 
 	r.Get("/api/auth/status", s.AuthStatus)
 	r.Get("/api/projects", s.ListProjects)
@@ -32,15 +36,11 @@ func New(auth *auth.Client, craas *craas.Service) *chi.Mux {
 	r.Delete("/api/projects/{pid}/registries/{rid}", s.DeleteRegistry)
 
 	r.Get("/api/projects/{pid}/registries/{rid}/repositories", s.ListRepositories)
-	// Query param ?name=...
 	r.Delete("/api/projects/{pid}/registries/{rid}/repository", s.DeleteRepository)
 
-	// Query param ?repository=...
 	r.Get("/api/projects/{pid}/registries/{rid}/images", s.ListImages)
-	// Query param ?repository=... for context, path param digest is safe
 	r.Delete("/api/projects/{pid}/registries/{rid}/images/{digest}", s.DeleteImage)
 
-	// Query param ?repository=...
 	r.Get("/api/projects/{pid}/registries/{rid}/tags", s.ListTags)
 
 	return r
@@ -61,9 +61,32 @@ func enableCORS(next http.Handler) http.Handler {
 	})
 }
 
+func (s *Server) RequestLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+
+		s.Logger.Debug("request started",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"remote_addr", r.RemoteAddr,
+		)
+
+		next.ServeHTTP(ww, r)
+
+		s.Logger.Info("request completed",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", ww.Status(),
+			"duration", time.Since(start),
+		)
+	})
+}
+
 func (s *Server) AuthStatus(w http.ResponseWriter, r *http.Request) {
 	_, err := s.Auth.GetAccountToken()
 	if err != nil {
+		s.Logger.Warn("auth check failed", "error", err)
 		http.Error(w, "Not authenticated", http.StatusUnauthorized)
 		return
 	}
@@ -74,12 +97,14 @@ func (s *Server) AuthStatus(w http.ResponseWriter, r *http.Request) {
 func (s *Server) ListProjects(w http.ResponseWriter, r *http.Request) {
 	token, err := s.Auth.GetAccountToken()
 	if err != nil {
+		s.Logger.Error("failed to get account token", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	projects, err := s.Auth.ListProjects(token)
 	if err != nil {
+		s.Logger.Warn("failed to list projects, retrying with token invalidation", "error", err)
 		s.Auth.InvalidateAccountToken()
 		token, err = s.Auth.GetAccountToken()
 		if err == nil {
@@ -87,6 +112,7 @@ func (s *Server) ListProjects(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err != nil {
+		s.Logger.Error("failed to list projects after retry", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -97,6 +123,7 @@ func (s *Server) ListProjects(w http.ResponseWriter, r *http.Request) {
 func (s *Server) getProjectTokenWithRetry(pid string) (string, error) {
 	token, err := s.Auth.GetProjectToken(pid)
 	if err != nil {
+		s.Logger.Warn("failed to get project token, retrying", "project_id", pid, "error", err)
 		s.Auth.InvalidateProjectToken(pid)
 		return s.Auth.GetProjectToken(pid)
 	}
@@ -105,14 +132,18 @@ func (s *Server) getProjectTokenWithRetry(pid string) (string, error) {
 
 func (s *Server) ListRegistries(w http.ResponseWriter, r *http.Request) {
 	pid := chi.URLParam(r, "pid")
+	s.Logger.Debug("listing registries request", "project_id", pid)
+
 	token, err := s.getProjectTokenWithRetry(pid)
 	if err != nil {
+		s.Logger.Error("failed to get project token for registries list", "project_id", pid, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	registries, err := s.Craas.ListRegistries(r.Context(), token)
 	if err != nil {
+		s.Logger.Warn("failed to list registries, retrying", "project_id", pid, "error", err)
 		s.Auth.InvalidateProjectToken(pid)
 		token, err = s.Auth.GetProjectToken(pid)
 		if err == nil {
@@ -120,6 +151,7 @@ func (s *Server) ListRegistries(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err != nil {
+		s.Logger.Error("failed to list registries after retry", "project_id", pid, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -130,20 +162,24 @@ func (s *Server) ListRegistries(w http.ResponseWriter, r *http.Request) {
 func (s *Server) DeleteRegistry(w http.ResponseWriter, r *http.Request) {
 	pid := chi.URLParam(r, "pid")
 	rid := chi.URLParam(r, "rid")
+	s.Logger.Info("deleting registry request", "project_id", pid, "registry_id", rid)
 
 	token, err := s.getProjectTokenWithRetry(pid)
 	if err != nil {
+		s.Logger.Error("failed to get project token for registry deletion", "project_id", pid, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if err := s.Craas.DeleteRegistry(r.Context(), token, rid); err != nil {
+		s.Logger.Warn("failed to delete registry, retrying", "registry_id", rid, "error", err)
 		s.Auth.InvalidateProjectToken(pid)
 		token, _ = s.Auth.GetProjectToken(pid)
 		err = s.Craas.DeleteRegistry(r.Context(), token, rid)
 	}
 
 	if err != nil {
+		s.Logger.Error("failed to delete registry after retry", "registry_id", rid, "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
