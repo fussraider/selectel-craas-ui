@@ -174,8 +174,8 @@ func TestListImages_MissingTags(t *testing.T) {
 	assert.NotNil(t, imgSub2)
 	assert.Contains(t, imgSub2.Tags, "v4-list")
 
-    assert.NotNil(t, imgNested)
-    assert.Contains(t, imgNested.Tags, "v5-nested")
+	assert.NotNil(t, imgNested)
+	assert.Contains(t, imgNested.Tags, "v5-nested")
 
 	assert.NotNil(t, imgDef)
 	assert.Contains(t, imgDef.Tags, "v2")
