@@ -40,6 +40,7 @@ func New(auth *auth.Client, craas *craas.Service, logger *slog.Logger) *chi.Mux 
 
 	r.Get("/api/projects/{pid}/registries/{rid}/images", s.ListImages)
 	r.Delete("/api/projects/{pid}/registries/{rid}/images/{digest}", s.DeleteImage)
+	r.Post("/api/projects/{pid}/registries/{rid}/cleanup", s.CleanupRepository)
 
 	r.Get("/api/projects/{pid}/registries/{rid}/tags", s.ListTags)
 
@@ -184,6 +185,51 @@ func (s *Server) DeleteRegistry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) CleanupRepository(w http.ResponseWriter, r *http.Request) {
+	pid := chi.URLParam(r, "pid")
+	rid := chi.URLParam(r, "rid")
+	rname := r.URL.Query().Get("repository")
+
+	if rname == "" {
+		http.Error(w, "repository param required", http.StatusBadRequest)
+		return
+	}
+
+	var req craas.CleanupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if len(req.Digests) == 0 && len(req.Tags) == 0 {
+		http.Error(w, "digests or tags required", http.StatusBadRequest)
+		return
+	}
+
+	token, err := s.getProjectTokenWithRetry(pid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	result, err := s.Craas.CleanupRepository(r.Context(), token, rid, rname, req.Digests, req.DisableGC)
+	if err != nil {
+		s.Logger.Warn("failed to cleanup repository, retrying", "error", err)
+		s.Auth.InvalidateProjectToken(pid)
+		token, _ = s.Auth.GetProjectToken(pid)
+		result, err = s.Craas.CleanupRepository(r.Context(), token, rid, rname, req.Digests, req.DisableGC)
+	}
+
+	if err != nil {
+		s.Logger.Error("failed to cleanup repository", "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 func (s *Server) ListRepositories(w http.ResponseWriter, r *http.Request) {

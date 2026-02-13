@@ -6,8 +6,21 @@
     <div v-if="store.loading" class="loading">Loading images...</div>
     <div v-else-if="store.error" class="error">{{ store.error }}</div>
     <div v-else class="list-container">
+      <div class="list-controls" v-if="store.images.length > 0">
+         <div class="select-all">
+            <input type="checkbox" id="selectAll" :checked="allSelected" @change="toggleSelectAll" />
+            <label for="selectAll">Select All</label>
+         </div>
+         <button v-if="selectedImages.size > 0" @click="confirmDelete" class="bulk-delete-btn">
+            Delete Selected ({{ selectedImages.size }})
+         </button>
+      </div>
+
       <div v-if="store.images.length === 0" class="empty-state">No images found.</div>
       <div v-for="image in store.images" :key="image.digest" class="list-item">
+        <div class="checkbox-container">
+           <input type="checkbox" :value="image.digest" :checked="selectedImages.has(image.digest)" @change="toggleSelection(image.digest)" />
+        </div>
         <div class="item-info">
           <div class="digest">{{ image.digest.substring(0, 12) }}...</div>
           <div class="tags">
@@ -28,11 +41,31 @@
       </div>
     </div>
   </div>
+
+  <dialog ref="deleteModal" class="modal">
+    <div class="modal-content">
+      <h2>Confirm Deletion</h2>
+      <p>Are you sure you want to delete {{ selectedImages.size }} selected images?</p>
+
+      <div class="form-group">
+        <label>
+            <input type="checkbox" v-model="deleteWithGC">
+            Run garbage collection?
+        </label>
+        <p class="help-text">This will free up space immediately.</p>
+      </div>
+
+      <div class="modal-actions">
+        <button @click="closeModal" class="cancel-btn">Cancel</button>
+        <button @click="executeBulkDelete" class="confirm-btn">Delete</button>
+      </div>
+    </div>
+  </dialog>
 </template>
 
 <script setup lang="ts">
 import { useRegistryStore } from '@/stores/registry'
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
@@ -41,9 +74,58 @@ const pid = computed(() => route.params.pid as string)
 const rid = computed(() => route.params.rid as string)
 const rname = computed(() => route.params.rname as string)
 
+const selectedImages = ref(new Set<string>())
+const deleteWithGC = ref(true)
+const deleteModal = ref<HTMLDialogElement | null>(null)
+
+const allSelected = computed(() => {
+    return store.images.length > 0 && selectedImages.value.size === store.images.length
+})
+
 onMounted(() => {
   store.fetchImages(pid.value, rid.value, rname.value)
 })
+
+const toggleSelection = (digest: string) => {
+    if (selectedImages.value.has(digest)) {
+        selectedImages.value.delete(digest)
+    } else {
+        selectedImages.value.add(digest)
+    }
+}
+
+const toggleSelectAll = () => {
+    if (allSelected.value) {
+        selectedImages.value.clear()
+    } else {
+        store.images.forEach(img => selectedImages.value.add(img.digest))
+    }
+}
+
+const confirmDelete = () => {
+    deleteModal.value?.showModal()
+}
+
+const closeModal = () => {
+    deleteModal.value?.close()
+}
+
+const executeBulkDelete = async () => {
+    try {
+        await store.cleanupRepository(
+            pid.value,
+            rid.value,
+            rname.value,
+            Array.from(selectedImages.value),
+            !deleteWithGC.value // API expects disable_gc
+        )
+        selectedImages.value.clear()
+        closeModal()
+    } catch (err) {
+        // Error is handled in store, displayed in UI
+        closeModal()
+    }
+}
 
 const deleteImg = async (digest: string) => {
   if (confirm(`Are you sure you want to delete image ${digest}?`)) {
@@ -144,5 +226,117 @@ const deleteImg = async (digest: string) => {
     color: $secondary-color;
     border: 1px dashed $border-color;
     border-radius: 8px;
+}
+
+.list-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: #f8f9fa;
+    border: 1px solid $border-color;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+}
+
+.select-all {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-weight: bold;
+}
+
+.checkbox-container {
+    padding-right: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.bulk-delete-btn {
+    background-color: $danger-color;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+
+    &:hover {
+        background-color: darken($danger-color, 10%);
+    }
+}
+
+.modal {
+    border: none;
+    border-radius: 8px;
+    padding: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-width: 500px;
+    width: 90%;
+
+    &::backdrop {
+        background: rgba(0, 0, 0, 0.5);
+    }
+}
+
+.modal-content {
+    padding: 2rem;
+
+    h2 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        color: $text-color;
+    }
+}
+
+.form-group {
+    margin: 1.5rem 0;
+
+    label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: bold;
+    }
+
+    .help-text {
+        margin-left: 1.8rem;
+        font-size: 0.85rem;
+        color: $secondary-color;
+        margin-top: 0.25rem;
+    }
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+
+    button {
+        padding: 0.6rem 1.2rem;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .cancel-btn {
+        background: #e9ecef;
+        color: $text-color;
+
+        &:hover {
+            background: darken(#e9ecef, 5%);
+        }
+    }
+
+    .confirm-btn {
+        background: $danger-color;
+        color: white;
+
+        &:hover {
+            background: darken($danger-color, 10%);
+        }
+    }
 }
 </style>

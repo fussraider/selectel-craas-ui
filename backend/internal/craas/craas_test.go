@@ -2,6 +2,7 @@ package craas
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -177,4 +178,37 @@ func TestDeleteRegistry(t *testing.T) {
 	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
 	err := svc.DeleteRegistry(context.Background(), "fake-token", "reg1")
 	assert.NoError(t, err)
+}
+
+func TestCleanupRepository(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/registries/reg1/repositories/repo1/cleanup" && r.Method == "POST" {
+			var req CleanupRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			if len(req.Digests) == 1 && req.Digests[0] == "sha256:abc" && req.DisableGC == false {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{
+					"deleted": [{"digest": "sha256:abc", "tags": []}],
+					"failed": []
+				}`))
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+			}
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
+	result, err := svc.CleanupRepository(context.Background(), "fake-token", "reg1", "repo1", []string{"sha256:abc"}, false)
+
+	assert.NoError(t, err)
+	assert.Len(t, result.Deleted, 1)
+	assert.Len(t, result.Failed, 0)
 }
