@@ -2,13 +2,17 @@ package auth
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/generic/selectel-craas-web/internal/config"
 	"github.com/stretchr/testify/assert"
 )
+
+var testLogger = slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 func TestGetAccountToken(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +31,7 @@ func TestGetAccountToken(t *testing.T) {
 		SelectelAccountID: "12345",
 		SelectelPassword:  "password",
 	}
-	client := New(cfg)
+	client := New(cfg, testLogger)
 	client.AuthURL = ts.URL + "/v3/auth/tokens"
 
 	token, err := client.GetAccountToken()
@@ -52,7 +56,7 @@ func TestListProjects(t *testing.T) {
 	defer ts.Close()
 
 	cfg := &config.Config{}
-	client := New(cfg)
+	client := New(cfg, testLogger)
 	client.ProjURL = ts.URL + "/v3/auth/projects"
 
 	projects, err := client.ListProjects("fake-token")
@@ -87,7 +91,7 @@ func TestGetProjectToken(t *testing.T) {
 		SelectelAccountID: "12345",
 		SelectelPassword:  "password",
 	}
-	client := New(cfg)
+	client := New(cfg, testLogger)
 	client.AuthURL = ts.URL + "/v3/auth/tokens"
 
 	token, err := client.GetProjectToken("p1")

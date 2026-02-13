@@ -2,12 +2,16 @@ package craas
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+var testLogger = slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 func TestListRegistries(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +25,7 @@ func TestListRegistries(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	svc := &Service{endpoint: ts.URL + "/v1"}
+	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
 	registries, err := svc.ListRegistries(context.Background(), "fake-token")
 
 	assert.NoError(t, err)
@@ -41,7 +45,7 @@ func TestListRepositories(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	svc := &Service{endpoint: ts.URL + "/v1"}
+	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
 	repos, err := svc.ListRepositories(context.Background(), "fake-token", "reg1")
 
 	assert.NoError(t, err)
@@ -61,7 +65,7 @@ func TestListImages(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	svc := &Service{endpoint: ts.URL + "/v1"}
+	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
 	images, err := svc.ListImages(context.Background(), "fake-token", "reg1", "repo1")
 
 	assert.NoError(t, err)
@@ -79,7 +83,7 @@ func TestDeleteRegistry(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	svc := &Service{endpoint: ts.URL + "/v1"}
+	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
 	err := svc.DeleteRegistry(context.Background(), "fake-token", "reg1")
 	assert.NoError(t, err)
 }
