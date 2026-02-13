@@ -22,14 +22,22 @@
            <input type="checkbox" :value="image.digest" :checked="selectedImages.has(image.digest)" @change="toggleSelection(image.digest)" />
         </div>
         <div class="item-info">
-          <div class="digest">{{ image.digest.substring(0, 12) }}...</div>
+          <div class="digest-row">
+            <span class="digest" :title="image.digest">{{ image.digest }}</span>
+            <button class="copy-btn" @click="copyToClipboard(image.digest)" title="Copy Digest">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+                    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                </svg>
+            </button>
+          </div>
           <div class="tags">
             <span v-for="tag in image.tags" :key="tag" class="tag">{{ tag }}</span>
             <span v-if="!image.tags || image.tags.length === 0" class="no-tags">No tags</span>
           </div>
           <div class="item-meta">
             <span>Size: {{ (image.size / 1024 / 1024).toFixed(2) }} MB</span>
-            <span>Created: {{ new Date(image.createdAt).toLocaleDateString() }}</span>
+            <span>Created: {{ new Date(image.createdAt).toLocaleString() }}</span>
           </div>
         </div>
         <button @click="deleteImg(image.digest)" class="delete-btn" title="Delete Image">
@@ -132,6 +140,12 @@ const deleteImg = async (digest: string) => {
     await store.deleteImage(pid.value, rid.value, rname.value, digest)
   }
 }
+
+const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).catch(err => {
+        console.error('Failed to copy text: ', err)
+    })
+}
 </script>
 
 <style scoped lang="scss">
@@ -156,8 +170,9 @@ const deleteImg = async (digest: string) => {
   border-radius: 6px;
   padding: 1.25rem;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start; // Changed from space-between
   align-items: flex-start;
+  gap: 1rem; // Add gap for spacing
   transition: box-shadow 0.2s;
 
   &:hover {
@@ -169,12 +184,36 @@ const deleteImg = async (digest: string) => {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    flex: 1; // Take up remaining space
+    min-width: 0; // Allow shrinking for text overflow
+}
+
+.digest-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .digest {
     font-family: monospace;
     font-weight: bold;
     color: $text-color;
+    word-break: break-all; // Handle long hashes
+    font-size: 0.9rem;
+}
+
+.copy-btn {
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: $secondary-color;
+    display: flex;
+    align-items: center;
+
+    &:hover {
+        color: $primary-color;
+    }
 }
 
 .tags {
@@ -214,6 +253,7 @@ const deleteImg = async (digest: string) => {
   border-radius: 4px;
   transition: background-color 0.2s;
   margin-top: -0.25rem;
+  flex: 0 0 auto; // Prevent shrinking
 
   &:hover {
     background-color: rgba(220, 53, 69, 0.1);
@@ -247,9 +287,10 @@ const deleteImg = async (digest: string) => {
 }
 
 .checkbox-container {
-    padding-right: 1rem;
+    flex: 0 0 auto; // Prevent shrinking or growing
     display: flex;
     align-items: center;
+    padding-top: 0.25rem; // Visual alignment
 }
 
 .bulk-delete-btn {
