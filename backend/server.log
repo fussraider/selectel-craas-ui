@@ -1,6 +1,0 @@
-2026/02/13 17:52:41 No .env file found, relying on environment variables
-time=2026-02-13T17:52:41.174Z level=INFO msg="starting application" port=8080 log_level=INFO
-time=2026-02-13T17:52:41.174Z level=INFO msg="server listening" addr=:8080
-time=2026-02-13T17:52:43.246Z level=ERROR msg="failed to get account token" service=auth error="failed to get token: status 401, body: {\"error\":{\"code\":401,\"message\":\"The request you have made requires authentication.\",\"title\":\"Unauthorized\"}}\n"
-time=2026-02-13T17:52:43.246Z level=WARN msg="auth check failed" service=api error="failed to get token: status 401, body: {\"error\":{\"code\":401,\"message\":\"The request you have made requires authentication.\",\"title\":\"Unauthorized\"}}\n"
-time=2026-02-13T17:52:43.246Z level=INFO msg="request completed" service=api method=GET path=/api/auth/status status=401 duration=703.537158ms

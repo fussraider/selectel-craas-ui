@@ -75,8 +75,11 @@ func (c *Client) GetAccountToken() (string, error) {
 				},
 			},
 			"scope": map[string]interface{}{
-				"domain": map[string]interface{}{
-					"name": c.cfg.SelectelAccountID,
+				"project": map[string]interface{}{
+					"name": c.cfg.SelectelProjectName,
+					"domain": map[string]interface{}{
+						"name": c.cfg.SelectelAccountID,
+					},
 				},
 			},
 		},
@@ -130,7 +133,10 @@ func (c *Client) GetProjectToken(projectID string) (string, error) {
 			},
 			"scope": map[string]interface{}{
 				"project": map[string]interface{}{
-					"id": projectID,
+					"name": c.cfg.SelectelProjectName,
+					"domain": map[string]interface{}{
+						"name": c.cfg.SelectelAccountID,
+					},
 				},
 			},
 		},
