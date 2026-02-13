@@ -11,7 +11,7 @@
             <input type="checkbox" id="selectAll" :checked="allSelected" @change="toggleSelectAll" />
             <label for="selectAll">Select All</label>
          </div>
-         <button v-if="selectedImages.size > 0" @click="confirmDelete" class="bulk-delete-btn">
+         <button :class="{ 'hidden-btn': selectedImages.size === 0 }" @click="confirmDelete" class="bulk-delete-btn" :disabled="selectedImages.size === 0">
             Delete Selected ({{ selectedImages.size }})
          </button>
       </div>
@@ -168,16 +168,18 @@ const copyToClipboard = (text: string) => {
 .list-item {
   background: $card-bg;
   border: 1px solid $border-color;
-  border-radius: 6px;
-  padding: 1.25rem;
+  border-radius: 8px;
+  padding: 1.5rem;
   display: flex;
   justify-content: flex-start; // Changed from space-between
   align-items: flex-start;
-  gap: 1rem; // Add gap for spacing
-  transition: box-shadow 0.2s;
+  gap: 1.25rem; // Add gap for spacing
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
 
   &:hover {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border-color: color.adjust($border-color, $lightness: 10%);
+    transform: translateY(-1px);
   }
 }
 
@@ -303,9 +305,15 @@ const copyToClipboard = (text: string) => {
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.9rem;
+    transition: opacity 0.2s, background-color 0.2s;
 
     &:hover {
         background-color: color.adjust($danger-color, $lightness: -10%);
+    }
+
+    &.hidden-btn {
+        opacity: 0;
+        pointer-events: none;
     }
 }
 
