@@ -118,6 +118,21 @@ export const useRegistryStore = defineStore('registry', {
             this.handleError(err)
             throw err
         }
+    },
+    async cleanupRepository(pid: string, rid: string, rname: string, digests: string[], disableGC: boolean = false) {
+        try {
+            await axios.post(`/api/projects/${pid}/registries/${rid}/cleanup`, {
+                digests: digests,
+                disable_gc: disableGC
+            }, {
+                params: { repository: rname }
+            })
+            // Remove deleted images from the store
+            this.images = this.images.filter(i => !digests.includes(i.digest))
+        } catch (err) {
+            this.handleError(err)
+            throw err
+        }
     }
   }
 })
