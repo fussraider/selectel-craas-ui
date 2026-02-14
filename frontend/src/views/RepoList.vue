@@ -9,7 +9,7 @@
           <h3>Garbage Collection</h3>
           <span class="gc-size">Potential Savings: {{ (store.gcInfo.sizeSummary / 1024 / 1024).toFixed(2) }} MB</span>
       </div>
-      <button @click="triggerGC" :disabled="store.loading" class="gc-btn">Start Garbage Collection</button>
+      <button @click="triggerGC" :disabled="store.gcLoading" class="gc-btn">Start Garbage Collection</button>
     </div>
 
     <div v-if="store.loading" class="loading">Loading repositories...</div>
