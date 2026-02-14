@@ -12,3 +12,10 @@ type CleanupRequest struct {
 	DisableGC bool     `json:"disable_gc"`
 	Tags      []string `json:"tags,omitempty"`
 }
+
+// GCInfo represents the garbage collection size information.
+type GCInfo struct {
+	SizeNonReferenced int64 `json:"sizeNonReferenced"`
+	SizeSummary       int64 `json:"sizeSummary"`
+	SizeUntagged      int64 `json:"sizeUntagged"`
+}
