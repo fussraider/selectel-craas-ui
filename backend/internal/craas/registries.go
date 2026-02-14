@@ -2,6 +2,10 @@ package craas
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	v1 "github.com/selectel/craas-go/pkg"
@@ -39,5 +43,86 @@ func (s *Service) DeleteRegistry(ctx context.Context, token string, registryID s
 		return err
 	}
 	s.logger.Info("registry deleted", "registry_id", registryID, "duration", duration)
+	return nil
+}
+
+// GetGCInfo returns the garbage collection size information.
+func (s *Service) GetGCInfo(ctx context.Context, token, registryID string) (*GCInfo, error) {
+	s.logger.Debug("getting gc info", "registry_id", registryID)
+
+	url := fmt.Sprintf("%s/registries/%s/garbage-collection/size", s.endpoint, registryID)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("X-Auth-Token", token)
+
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	start := time.Now()
+	resp, err := httpClient.Do(req)
+	duration := time.Since(start)
+
+	if err != nil {
+		s.logger.Error("failed to get gc info", "error", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		s.logger.Error("get gc info failed", "status", resp.StatusCode, "body", string(body))
+		return nil, fmt.Errorf("request failed with status: %d", resp.StatusCode)
+	}
+
+	var info GCInfo
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+		s.logger.Error("failed to decode gc info", "error", err)
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	s.logger.Info("got gc info", "registry_id", registryID, "duration", duration)
+	return &info, nil
+}
+
+// StartGC initiates the garbage collection process.
+func (s *Service) StartGC(ctx context.Context, token, registryID string) error {
+	s.logger.Info("starting gc", "registry_id", registryID)
+
+	url := fmt.Sprintf("%s/registries/%s/garbage-collection", s.endpoint, registryID)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("X-Auth-Token", token)
+
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	start := time.Now()
+	resp, err := httpClient.Do(req)
+	duration := time.Since(start)
+
+	if err != nil {
+		s.logger.Error("failed to start gc", "error", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		if resp.StatusCode == http.StatusConflict {
+			return fmt.Errorf("garbage collection already in progress")
+		}
+		body, _ := io.ReadAll(resp.Body)
+		s.logger.Error("start gc failed", "status", resp.StatusCode, "body", string(body))
+		return fmt.Errorf("request failed with status: %d", resp.StatusCode)
+	}
+
+	s.logger.Info("gc started", "registry_id", registryID, "duration", duration)
 	return nil
 }

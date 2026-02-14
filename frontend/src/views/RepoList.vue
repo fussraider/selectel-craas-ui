@@ -3,6 +3,15 @@
     <div class="header">
       <h1>Repositories ({{ rid }})</h1>
     </div>
+
+    <div class="gc-section" v-if="store.gcInfo">
+      <div class="gc-header">
+          <h3>Garbage Collection</h3>
+          <span class="gc-size">Potential Savings: {{ (store.gcInfo.sizeSummary / 1024 / 1024).toFixed(2) }} MB</span>
+      </div>
+      <button @click="triggerGC" :disabled="store.gcLoading" class="gc-btn">Start Garbage Collection</button>
+    </div>
+
     <div v-if="store.loading" class="loading">Loading repositories...</div>
     <div v-else-if="store.error" class="error">{{ store.error }}</div>
     <div v-else class="list-container">
@@ -40,7 +49,14 @@ const rid = computed(() => route.params.rid as string)
 
 onMounted(() => {
   store.fetchRepositories(pid.value, rid.value)
+  store.fetchGCInfo(pid.value, rid.value)
 })
+
+const triggerGC = async () => {
+    if (confirm("Garbage collection makes the registry read-only until it completes. Are you sure you want to proceed?")) {
+        await store.startGC(pid.value, rid.value)
+    }
+}
 
 const deleteRepo = async (rname: string) => {
   if (confirm(`Are you sure you want to delete repository '${rname}'?`)) {
@@ -57,6 +73,54 @@ const deleteRepo = async (rname: string) => {
     margin-bottom: 2rem;
     color: $primary-color;
   }
+}
+
+.gc-section {
+  background: $card-bg;
+  border: 1px solid $border-color;
+  border-radius: 6px;
+  padding: 1.25rem;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .gc-header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      h3 {
+          font-size: 1.1rem;
+          margin: 0;
+          color: $primary-color;
+      }
+
+      .gc-size {
+          font-size: 0.9rem;
+          color: $secondary-color;
+      }
+  }
+}
+
+.gc-btn {
+    background-color: $primary-color;
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: opacity 0.2s;
+
+    &:hover:not(:disabled) {
+        opacity: 0.9;
+    }
+
+    &:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
 }
 
 .list-container {
