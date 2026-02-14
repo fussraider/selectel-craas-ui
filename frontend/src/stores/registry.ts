@@ -33,12 +33,20 @@ export interface CleanupResult {
     failed: any[]
 }
 
+export interface GCInfo {
+  sizeNonReferenced: number
+  sizeSummary: number
+  sizeUntagged: number
+}
+
 export const useRegistryStore = defineStore('registry', () => {
   const projects = ref<Project[]>([])
   const registries = ref<Registry[]>([])
   const repositories = ref<Repository[]>([])
   const images = ref<Image[]>([])
+  const gcInfo = ref<GCInfo | null>(null)
   const loading = ref(false)
+  const gcLoading = ref(false)
   const error = ref<string | null>(null)
   const success = ref<string | null>(null) // Added for success messages
 
@@ -183,12 +191,41 @@ export const useRegistryStore = defineStore('registry', () => {
       }
   }
 
+  const fetchGCInfo = async (pid: string, rid: string) => {
+      gcLoading.value = true
+      clearNotifications()
+      try {
+          const res = await axios.get(`/api/projects/${pid}/registries/${rid}/gc`)
+          gcInfo.value = res.data
+      } catch (err) {
+          handleError(err)
+      } finally {
+          gcLoading.value = false
+      }
+  }
+
+  const startGC = async (pid: string, rid: string) => {
+      gcLoading.value = true
+      clearNotifications()
+      try {
+          await axios.post(`/api/projects/${pid}/registries/${rid}/gc`)
+          success.value = "Garbage collection initiated"
+      } catch (err) {
+          handleError(err)
+          throw err
+      } finally {
+          gcLoading.value = false
+      }
+  }
+
   return {
       projects,
       registries,
       repositories,
       images,
+      gcInfo,
       loading,
+      gcLoading,
       error,
       success,
       fetchProjects,
@@ -199,6 +236,8 @@ export const useRegistryStore = defineStore('registry', () => {
       fetchImages,
       deleteImage,
       cleanupRepository,
+      fetchGCInfo,
+      startGC,
       clearNotifications
   }
 })
