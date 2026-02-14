@@ -46,6 +46,7 @@ export const useRegistryStore = defineStore('registry', () => {
   const images = ref<Image[]>([])
   const gcInfo = ref<GCInfo | null>(null)
   const loading = ref(false)
+  const gcLoading = ref(false)
   const error = ref<string | null>(null)
   const success = ref<string | null>(null) // Added for success messages
 
@@ -191,7 +192,7 @@ export const useRegistryStore = defineStore('registry', () => {
   }
 
   const fetchGCInfo = async (pid: string, rid: string) => {
-      loading.value = true
+      gcLoading.value = true
       clearNotifications()
       try {
           const res = await axios.get(`/api/projects/${pid}/registries/${rid}/gc`)
@@ -199,12 +200,12 @@ export const useRegistryStore = defineStore('registry', () => {
       } catch (err) {
           handleError(err)
       } finally {
-          loading.value = false
+          gcLoading.value = false
       }
   }
 
   const startGC = async (pid: string, rid: string) => {
-      loading.value = true
+      gcLoading.value = true
       clearNotifications()
       try {
           await axios.post(`/api/projects/${pid}/registries/${rid}/gc`)
@@ -213,7 +214,7 @@ export const useRegistryStore = defineStore('registry', () => {
           handleError(err)
           throw err
       } finally {
-          loading.value = false
+          gcLoading.value = false
       }
   }
 
@@ -224,6 +225,7 @@ export const useRegistryStore = defineStore('registry', () => {
       images,
       gcInfo,
       loading,
+      gcLoading,
       error,
       success,
       fetchProjects,
