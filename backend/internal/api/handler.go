@@ -42,6 +42,9 @@ func New(auth *auth.Client, craas *craas.Service, logger *slog.Logger) *chi.Mux 
 	r.Delete("/api/projects/{pid}/registries/{rid}/images/{digest}", s.DeleteImage)
 	r.Post("/api/projects/{pid}/registries/{rid}/cleanup", s.CleanupRepository)
 
+	r.Get("/api/projects/{pid}/registries/{rid}/gc", s.GetGCInfo)
+	r.Post("/api/projects/{pid}/registries/{rid}/gc", s.StartGC)
+
 	r.Get("/api/projects/{pid}/registries/{rid}/tags", s.ListTags)
 
 	return r
@@ -185,6 +188,57 @@ func (s *Server) DeleteRegistry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) GetGCInfo(w http.ResponseWriter, r *http.Request) {
+	pid := chi.URLParam(r, "pid")
+	rid := chi.URLParam(r, "rid")
+
+	token, err := s.getProjectTokenWithRetry(pid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	info, err := s.Craas.GetGCInfo(r.Context(), token, rid)
+	if err != nil {
+		s.Auth.InvalidateProjectToken(pid)
+		token, _ = s.Auth.GetProjectToken(pid)
+		info, err = s.Craas.GetGCInfo(r.Context(), token, rid)
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(info)
+}
+
+func (s *Server) StartGC(w http.ResponseWriter, r *http.Request) {
+	pid := chi.URLParam(r, "pid")
+	rid := chi.URLParam(r, "rid")
+
+	token, err := s.getProjectTokenWithRetry(pid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := s.Craas.StartGC(r.Context(), token, rid); err != nil {
+		s.Auth.InvalidateProjectToken(pid)
+		token, _ = s.Auth.GetProjectToken(pid)
+		err = s.Craas.StartGC(r.Context(), token, rid)
+	}
+
+	if err != nil {
+		if err.Error() == "garbage collection already in progress" {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (s *Server) CleanupRepository(w http.ResponseWriter, r *http.Request) {
