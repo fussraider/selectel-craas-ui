@@ -14,7 +14,6 @@
                 <span class="label">ID:</span>
                 <span class="value">{{ rid }}</span>
             </div>
-             <!-- We might need to find the registry object in store to get status/size/created -->
              <div v-if="registry" class="info-item">
                 <span class="label">Name:</span>
                 <span class="value">{{ registry.name }}</span>
@@ -65,27 +64,50 @@
                 <h4>Delete Registry</h4>
                 <p>This action cannot be undone. All repositories and images will be lost.</p>
             </div>
-            <button @click="deleteReg" :disabled="store.loading" class="btn danger">
-                Delete Registry
-            </button>
+            <span :title="!configStore.enableDeleteRegistry ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper">
+                <button
+                    @click="openDeleteModal"
+                    :disabled="store.loading || !configStore.enableDeleteRegistry"
+                    class="btn danger"
+                >
+                    Delete Registry
+                </button>
+            </span>
         </div>
     </div>
+
+    <ConfirmModal
+        v-if="modalOpen"
+        :is-open="modalOpen"
+        title="Delete Registry"
+        :message="`Are you sure you want to delete registry '${registry?.name || rid}'? This action cannot be undone.`"
+        :is-danger="true"
+        confirm-text="Delete Registry"
+        :verification-value="registry?.name"
+        @update:is-open="modalOpen = $event"
+        @confirm="confirmDelete"
+        @cancel="modalOpen = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { useRegistryStore } from '@/stores/registry'
-import { onMounted, computed, watch } from 'vue'
+import { useConfigStore } from '@/stores/config'
+import { onMounted, computed, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 const store = useRegistryStore()
+const configStore = useConfigStore()
 
 const pid = computed(() => route.params.pid as string)
 const rid = computed(() => route.params.rid as string)
 
 const registry = computed(() => store.registries.find(r => r.id === rid.value))
+const modalOpen = ref(false)
 
 const fetchData = () => {
     store.clearNotifications()
@@ -108,12 +130,14 @@ const triggerGC = async () => {
     }
 }
 
-const deleteReg = async () => {
-  if (confirm('Are you sure you want to delete this registry? This action is irreversible.')) {
+const openDeleteModal = () => {
+    modalOpen.value = true
+}
+
+const confirmDelete = async () => {
+    modalOpen.value = false
     await store.deleteRegistry(pid.value, rid.value)
-    // Redirect to project root or dashboard
     router.push('/')
-  }
 }
 </script>
 
@@ -284,5 +308,14 @@ const deleteReg = async () => {
     background-color: rgba(#198754, 0.1);
     color: #198754;
     border-radius: 4px;
+}
+
+.tooltip-wrapper {
+    display: inline-block;
+    cursor: help;
+}
+
+.btn:disabled {
+    pointer-events: none;
 }
 </style>
