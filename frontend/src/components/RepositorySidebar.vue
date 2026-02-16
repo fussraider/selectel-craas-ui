@@ -12,7 +12,16 @@
 
     <div v-if="store.error" class="error-msg">{{ store.error }}</div>
 
-    <div class="repo-list">
+    <!-- Registry Loading Skeleton -->
+    <div v-if="store.loading && store.registries.length === 0" class="repo-list">
+        <div v-for="i in 3" :key="i" class="skeleton-group">
+            <div class="skeleton-header"></div>
+            <div class="skeleton-item" style="width: 80%"></div>
+            <div class="skeleton-item" style="width: 60%"></div>
+        </div>
+    </div>
+
+    <div v-else class="repo-list">
       <div v-for="registry in store.registries" :key="registry.id" class="registry-group">
         <div class="registry-header">
             <router-link
@@ -23,13 +32,22 @@
                 <span class="registry-icon">📦</span>
                 {{ registry.name }}
             </router-link>
-            <span v-if="registry.loadingRepos" class="loading-indicator">...</span>
+            <!-- Spinner for specific registry loading -->
+            <div v-if="registry.loadingRepos" class="spinner-small"></div>
         </div>
 
         <div class="repo-items">
-            <div v-if="!registry.repositories || registry.repositories.length === 0" class="empty-repos">
+            <!-- Repos Loading Skeleton -->
+            <div v-if="registry.loadingRepos && (!registry.repositories || registry.repositories.length === 0)" class="skeleton-repos">
+                 <div class="skeleton-item" style="width: 90%"></div>
+                 <div class="skeleton-item" style="width: 70%"></div>
+                 <div class="skeleton-item" style="width: 85%"></div>
+            </div>
+
+            <div v-else-if="!registry.repositories || registry.repositories.length === 0" class="empty-repos">
                 No repositories
             </div>
+
             <router-link
                 v-else
                 v-for="repo in registry.repositories"
@@ -210,8 +228,56 @@ const refresh = async () => {
     color: $secondary-color;
 }
 
-.loading-indicator {
-    font-size: 0.8rem;
-    color: $secondary-color;
+// Loading Skeletons
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton-group {
+    margin-bottom: 1.5rem;
+    padding: 0 1rem;
+}
+
+.skeleton-header {
+    height: 1.2rem;
+    background: #374151;
+    background-image: linear-gradient(to right, #374151 0%, #4b5563 20%, #374151 40%, #374151 100%);
+    background-repeat: no-repeat;
+    background-size: 800px 100%;
+    animation: shimmer 1.5s infinite linear forwards;
+    border-radius: 4px;
+    margin-bottom: 0.8rem;
+    width: 60%;
+}
+
+.skeleton-item {
+    height: 1rem;
+    background: #374151;
+    background-image: linear-gradient(to right, #374151 0%, #4b5563 20%, #374151 40%, #374151 100%);
+    background-repeat: no-repeat;
+    background-size: 800px 100%;
+    animation: shimmer 1.5s infinite linear forwards;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    margin-left: 1.5rem;
+}
+
+.skeleton-repos {
+    padding-top: 0.5rem;
+}
+
+.spinner-small {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba($text-color, 0.3);
+    border-radius: 50%;
+    border-top-color: $primary-color;
+    animation: spin 1s ease-in-out infinite;
+    margin-left: 0.5rem;
 }
 </style>
