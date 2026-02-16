@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/generic/selectel-craas-web/internal/auth"
+	"github.com/generic/selectel-craas-web/internal/config"
 	"github.com/generic/selectel-craas-web/internal/craas"
 )
 
@@ -13,19 +14,24 @@ type Server struct {
 	Auth   *auth.Client
 	Craas  *craas.Service
 	Logger *slog.Logger
+	Config *config.Config
 }
 
-func New(auth *auth.Client, craas *craas.Service, logger *slog.Logger) *chi.Mux {
+func New(auth *auth.Client, craas *craas.Service, logger *slog.Logger, cfg *config.Config) *chi.Mux {
 	s := &Server{
 		Auth:   auth,
 		Craas:  craas,
 		Logger: logger.With("service", "api"),
+		Config: cfg,
 	}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	r.Use(EnableCORS)
 	r.Use(s.RequestLogger)
+
+	// Config
+	r.Get("/api/config", s.GetConfig)
 
 	// Projects
 	r.Get("/api/auth/status", s.AuthStatus)

@@ -29,7 +29,7 @@ func main() {
 	authClient := auth.New(cfg, appLogger)
 	craasService := craas.New(appLogger)
 
-	router := api.New(authClient, craasService, appLogger)
+	router := api.New(authClient, craasService, appLogger, cfg)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.WebPort,
