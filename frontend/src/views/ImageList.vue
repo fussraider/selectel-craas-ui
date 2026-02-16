@@ -2,7 +2,7 @@
   <div class="view-container">
     <div class="header">
       <h1>Images ({{ rname }})</h1>
-      <button @click="deleteRepo" class="btn danger-outline">Delete Repository</button>
+      <button @click="openDeleteRepoModal" class="btn danger-outline">Delete Repository</button>
     </div>
 
     <div v-if="store.imagesLoading" class="loading">Loading images...</div>
@@ -32,7 +32,7 @@
              <input type="text" v-model="searchQuery" placeholder="Search by tag..." class="search-input" />
          </div>
 
-         <button :class="{ 'hidden-btn': selectedImages.size === 0 }" @click="confirmDelete" class="bulk-delete-btn" :disabled="selectedImages.size === 0">
+         <button :class="{ 'hidden-btn': selectedImages.size === 0 }" @click="openBulkDeleteModal" class="bulk-delete-btn" :disabled="selectedImages.size === 0">
             Delete Selected ({{ selectedImages.size }})
          </button>
       </div>
@@ -76,7 +76,7 @@
             <span>Created: {{ new Date(image.createdAt).toLocaleString() }}</span>
           </div>
         </div>
-        <button @click="deleteImg(image.digest)" class="delete-btn" title="Delete Image">
+        <button @click="openDeleteImageModal(image.digest)" class="delete-btn" title="Delete Image">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
                 <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
                 <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
@@ -86,34 +86,35 @@
     </div>
   </div>
 
-  <dialog ref="deleteModal" class="modal">
-    <div class="modal-content">
-      <h2>Confirm Deletion</h2>
-      <p>Are you sure you want to delete {{ selectedImages.size }} selected images?</p>
-
-      <div class="form-group">
-        <label>
-            <input type="checkbox" v-model="deleteWithGC">
-            Run garbage collection?
-        </label>
-        <p class="help-text">This will free up space immediately.</p>
-      </div>
-
-      <div class="modal-actions">
-        <button @click="closeModal" class="cancel-btn">Cancel</button>
-        <button @click="executeBulkDelete" class="confirm-btn">Delete</button>
-      </div>
+  <!-- Reusable Confirmation Modal -->
+  <ConfirmModal
+    v-if="modalState.isOpen"
+    :is-open="modalState.isOpen"
+    :title="modalState.title"
+    :message="modalState.message"
+    :is-danger="true"
+    confirm-text="Delete"
+    @update:is-open="modalState.isOpen = $event"
+    @confirm="handleModalConfirm"
+    @cancel="closeModal"
+  >
+    <div v-if="modalState.type === 'bulk'" class="form-group">
+      <label>
+          <input type="checkbox" v-model="deleteWithGC">
+          Run garbage collection?
+      </label>
+      <p class="help-text">This will free up space immediately.</p>
     </div>
-  </dialog>
+  </ConfirmModal>
+
 </template>
 
 <script setup lang="ts">
 import { useRegistryStore } from '@/stores/registry'
-import { onMounted, computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { onMounted, computed, ref, watch, reactive } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import ToastNotification from '@/components/ToastNotification.vue'
-
-import { useRouter } from 'vue-router'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -124,9 +125,17 @@ const rname = computed(() => route.params.rname as string)
 
 const selectedImages = ref(new Set<string>())
 const deleteWithGC = ref(true)
-const deleteModal = ref<HTMLDialogElement | null>(null)
 const searchQuery = ref("")
 const copiedState = ref<Record<string, boolean>>({})
+
+// Modal State Management
+const modalState = reactive({
+  isOpen: false,
+  type: 'single' as 'single' | 'bulk' | 'repo',
+  title: '',
+  message: '',
+  targetDigest: ''
+})
 
 const filteredImages = computed(() => {
     if (!searchQuery.value) return store.images
@@ -143,7 +152,7 @@ const allSelected = computed(() => {
 const fetchData = async () => {
     selectedImages.value.clear()
     searchQuery.value = ""
-    await store.fetchImages(route.params.pid as string, route.params.rid as string, route.params.rname as string)
+    await store.fetchImages(pid.value, rid.value, rname.value)
 }
 
 onMounted(() => {
@@ -170,36 +179,59 @@ const toggleSelectAll = () => {
     }
 }
 
-const confirmDelete = () => {
-    deleteModal.value?.showModal()
+// Modal Actions
+const openDeleteImageModal = (digest: string) => {
+    modalState.type = 'single'
+    modalState.targetDigest = digest
+    modalState.title = 'Delete Image'
+    modalState.message = `Are you sure you want to delete image ${digest}? This cannot be undone.`
+    modalState.isOpen = true
+}
+
+const openBulkDeleteModal = () => {
+    modalState.type = 'bulk'
+    modalState.title = 'Confirm Bulk Deletion'
+    modalState.message = `Are you sure you want to delete ${selectedImages.value.size} selected images?`
+    modalState.isOpen = true
+}
+
+const openDeleteRepoModal = () => {
+    modalState.type = 'repo'
+    modalState.title = 'Delete Repository'
+    modalState.message = `Are you sure you want to delete repository '${rname.value}'? All images within it will be permanently lost.`
+    modalState.isOpen = true
 }
 
 const closeModal = () => {
-    deleteModal.value?.close()
+    modalState.isOpen = false
+    modalState.targetDigest = ''
 }
 
-const executeBulkDelete = async () => {
+const handleModalConfirm = async () => {
+    modalState.isOpen = false // Close immediately or wait? Ideally wait, but store handles errors with toasts
     try {
-        await store.cleanupRepository(
-            pid.value,
-            rid.value,
-            rname.value,
-            Array.from(selectedImages.value),
-            !deleteWithGC.value // API expects disable_gc
-        )
-        selectedImages.value.clear()
-        closeModal()
+        if (modalState.type === 'single') {
+            await store.deleteImage(pid.value, rid.value, rname.value, modalState.targetDigest)
+        } else if (modalState.type === 'bulk') {
+            await store.cleanupRepository(
+                pid.value,
+                rid.value,
+                rname.value,
+                Array.from(selectedImages.value),
+                !deleteWithGC.value
+            )
+            selectedImages.value.clear()
+        } else if (modalState.type === 'repo') {
+            await store.deleteRepository(pid.value, rid.value, rname.value)
+            router.push('/')
+        }
     } catch (err) {
-        // Error is handled in store, displayed in UI via Toast
-        closeModal()
+        console.error("Action failed", err)
+    } finally {
+        // Modal is already closed
     }
 }
 
-const deleteImg = async (digest: string) => {
-  if (confirm(`Are you sure you want to delete image ${digest}?`)) {
-    await store.deleteImage(pid.value, rid.value, rname.value, digest)
-  }
-}
 
 const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -210,17 +242,6 @@ const copyToClipboard = (text: string, id: string) => {
     }).catch(err => {
         console.error('Failed to copy text: ', err)
     })
-}
-
-const deleteRepo = async () => {
-  if (confirm(`Are you sure you want to delete repository '${rname.value}'? All images within it will be lost.`)) {
-    try {
-        await store.deleteRepository(pid.value, rid.value, rname.value)
-        router.push('/')
-    } catch (e) {
-        // Error handling is done in store
-    }
-  }
 }
 </script>
 
@@ -472,31 +493,6 @@ const deleteRepo = async () => {
     }
 }
 
-.modal {
-    border: none;
-    border-radius: 8px;
-    padding: 0;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    max-width: 500px;
-    width: 90%;
-    background: $modal-bg;
-    color: $text-color;
-
-    &::backdrop {
-        background: rgba(0, 0, 0, 0.7);
-    }
-}
-
-.modal-content {
-    padding: 2rem;
-
-    h2 {
-        margin-top: 0;
-        margin-bottom: 1rem;
-        color: $text-color;
-    }
-}
-
 .form-group {
     margin: 1.5rem 0;
 
@@ -512,39 +508,6 @@ const deleteRepo = async () => {
         font-size: 0.85rem;
         color: $secondary-color;
         margin-top: 0.25rem;
-    }
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 2rem;
-
-    button {
-        padding: 0.6rem 1.2rem;
-        border-radius: 4px;
-        border: none;
-        cursor: pointer;
-        font-weight: bold;
-    }
-
-    .cancel-btn {
-        background: $muted-bg;
-        color: $text-color;
-
-        &:hover {
-            background: color.adjust($muted-bg, $lightness: -10%);
-        }
-    }
-
-    .confirm-btn {
-        background: $danger-color;
-        color: white;
-
-        &:hover {
-            background: color.adjust($danger-color, $lightness: -10%);
-        }
     }
 }
 </style>
