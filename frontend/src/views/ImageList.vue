@@ -2,14 +2,15 @@
   <div class="view-container">
     <div class="header">
       <h1>Images ({{ rname }})</h1>
-      <button
-          @click="openDeleteRepoModal"
-          class="btn danger-outline"
-          :disabled="!configStore.enableDeleteRepository"
-          :title="!configStore.enableDeleteRepository ? 'Disabled by environment configuration' : ''"
-      >
-          Delete Repository
-      </button>
+      <span :title="!configStore.enableDeleteRepository ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper">
+          <button
+              @click="openDeleteRepoModal"
+              class="btn danger-outline"
+              :disabled="!configStore.enableDeleteRepository"
+          >
+              Delete Repository
+          </button>
+      </span>
     </div>
 
     <div v-if="store.imagesLoading" class="loading">Loading images...</div>
@@ -39,15 +40,15 @@
              <input type="text" v-model="searchQuery" placeholder="Search by tag..." class="search-input" />
          </div>
 
-         <button
-             :class="{ 'hidden-btn': selectedImages.size === 0 }"
-             @click="openBulkDeleteModal"
-             class="bulk-delete-btn"
-             :disabled="selectedImages.size === 0 || !configStore.enableDeleteImage"
-             :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : ''"
-         >
-            Delete Selected ({{ selectedImages.size }})
-         </button>
+         <span :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper" :class="{ 'hidden-wrapper': selectedImages.size === 0 }">
+             <button
+                 @click="openBulkDeleteModal"
+                 class="bulk-delete-btn"
+                 :disabled="selectedImages.size === 0 || !configStore.enableDeleteImage"
+             >
+                Delete Selected ({{ selectedImages.size }})
+             </button>
+         </span>
       </div>
 
       <div v-if="filteredImages.length === 0" class="empty-state">No images found.</div>
@@ -89,17 +90,18 @@
             <span>Created: {{ new Date(image.createdAt).toLocaleString() }}</span>
           </div>
         </div>
-        <button
-            @click="openDeleteImageModal(image.digest)"
-            class="delete-btn"
-            title="Delete Image"
-            :disabled="!configStore.enableDeleteImage"
-        >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
-                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-            </svg>
-        </button>
+        <span class="tooltip-wrapper" :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : 'Delete Image'">
+            <button
+                @click="openDeleteImageModal(image.digest)"
+                class="delete-btn"
+                :disabled="!configStore.enableDeleteImage"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                </svg>
+            </button>
+        </span>
       </div>
     </div>
   </div>
@@ -629,5 +631,18 @@ const copyToClipboard = (text: string, id: string) => {
             background: color.adjust($danger-color, $lightness: -10%);
         }
     }
+}
+
+.tooltip-wrapper {
+    display: inline-block;
+    cursor: help;
+
+    &.hidden-wrapper {
+        display: none;
+    }
+}
+
+.btn:disabled, .bulk-delete-btn:disabled, .delete-btn:disabled {
+    pointer-events: none;
 }
 </style>
