@@ -59,7 +59,7 @@ func (s *Service) GetGCInfo(ctx context.Context, token, registryID string) (*GCI
 	req.Header.Set("X-Auth-Token", token)
 
 	httpClient := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: 5 * time.Minute,
 	}
 
 	start := time.Now()
@@ -101,7 +101,7 @@ func (s *Service) StartGC(ctx context.Context, token, registryID string) error {
 	req.Header.Set("X-Auth-Token", token)
 
 	httpClient := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: 5 * time.Minute,
 	}
 
 	start := time.Now()
