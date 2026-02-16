@@ -27,13 +27,18 @@
             <input type="checkbox" id="selectAll" :checked="allSelected" @change="toggleSelectAll" />
             <label for="selectAll">Select All</label>
          </div>
+
+         <div class="search-box">
+             <input type="text" v-model="searchQuery" placeholder="Search by tag..." class="search-input" />
+         </div>
+
          <button :class="{ 'hidden-btn': selectedImages.size === 0 }" @click="confirmDelete" class="bulk-delete-btn" :disabled="selectedImages.size === 0">
             Delete Selected ({{ selectedImages.size }})
          </button>
       </div>
 
-      <div v-if="store.images.length === 0" class="empty-state">No images found.</div>
-      <div v-for="image in store.images" :key="image.digest" class="list-item">
+      <div v-if="filteredImages.length === 0" class="empty-state">No images found.</div>
+      <div v-for="image in filteredImages" :key="image.digest" class="list-item">
         <div class="checkbox-container">
            <input type="checkbox" :value="image.digest" :checked="selectedImages.has(image.digest)" @change="toggleSelection(image.digest)" />
         </div>
@@ -89,7 +94,7 @@
 
 <script setup lang="ts">
 import { useRegistryStore } from '@/stores/registry'
-import { onMounted, computed, ref } from 'vue'
+import { onMounted, computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ToastNotification from '@/components/ToastNotification.vue'
 
@@ -105,13 +110,32 @@ const rname = computed(() => route.params.rname as string)
 const selectedImages = ref(new Set<string>())
 const deleteWithGC = ref(true)
 const deleteModal = ref<HTMLDialogElement | null>(null)
+const searchQuery = ref("")
 
-const allSelected = computed(() => {
-    return store.images.length > 0 && selectedImages.value.size === store.images.length
+const filteredImages = computed(() => {
+    if (!searchQuery.value) return store.images
+    const query = searchQuery.value.toLowerCase()
+    return store.images.filter(img =>
+        img.tags && img.tags.some(tag => tag.toLowerCase().includes(query))
+    )
 })
 
+const allSelected = computed(() => {
+    return filteredImages.value.length > 0 && selectedImages.value.size === filteredImages.value.length
+})
+
+const fetchData = async () => {
+    selectedImages.value.clear()
+    searchQuery.value = ""
+    await store.fetchImages(route.params.pid as string, route.params.rid as string, route.params.rname as string)
+}
+
 onMounted(() => {
-  store.fetchImages(pid.value, rid.value, rname.value)
+  fetchData()
+})
+
+watch(() => route.fullPath, () => {
+    fetchData()
 })
 
 const toggleSelection = (digest: string) => {
@@ -126,7 +150,7 @@ const toggleSelectAll = () => {
     if (allSelected.value) {
         selectedImages.value.clear()
     } else {
-        store.images.forEach(img => selectedImages.value.add(img.digest))
+        filteredImages.value.forEach(img => selectedImages.value.add(img.digest))
     }
 }
 
@@ -337,6 +361,8 @@ const deleteRepo = async () => {
     border-radius: 6px;
     margin-bottom: 0.5rem;
     min-height: 48px;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
 
 .select-all {
@@ -344,6 +370,28 @@ const deleteRepo = async () => {
     gap: 0.5rem;
     align-items: center;
     font-weight: bold;
+    white-space: nowrap;
+}
+
+.search-box {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    max-width: 400px;
+
+    .search-input {
+        width: 100%;
+        padding: 0.4rem 0.8rem;
+        border-radius: 4px;
+        border: 1px solid $border-color;
+        background-color: $card-bg;
+        color: $text-color;
+
+        &:focus {
+            outline: 2px solid $primary-color;
+            border-color: transparent;
+        }
+    }
 }
 
 .checkbox-container {
