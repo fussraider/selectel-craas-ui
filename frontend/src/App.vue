@@ -5,7 +5,7 @@ import AppLayout from '@/components/AppLayout.vue'
 
 <template>
   <AppLayout>
-    <RouterView />
+    <RouterView :key="$route.fullPath" />
   </AppLayout>
 </template>
 
