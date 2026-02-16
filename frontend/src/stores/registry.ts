@@ -48,7 +48,7 @@ export const useRegistryStore = defineStore('registry', () => {
   }
 
   const fetchRegistries = async (pid: string) => {
-    loading.value = true
+    // Note: External callers should manage global loading state if chained
     clearNotifications()
     try {
       const res = await client.get<Registry[]>(`/projects/${pid}/registries`)
@@ -61,8 +61,6 @@ export const useRegistryStore = defineStore('registry', () => {
       }))
     } catch (err) {
       handleError(err)
-    } finally {
-      loading.value = false
     }
   }
 
@@ -88,12 +86,17 @@ export const useRegistryStore = defineStore('registry', () => {
 
   // Orchestrator: Fetch registries then repositories for all
   const loadProjectData = async (pid: string) => {
+      loading.value = true
       selectedProjectId.value = pid
-      await fetchRegistries(pid)
+      try {
+        await fetchRegistries(pid)
 
-      // Parallel fetch repositories for all registries
-      const promises = registries.value.map(r => fetchRepositories(pid, r.id))
-      await Promise.all(promises)
+        // Parallel fetch repositories for all registries
+        const promises = registries.value.map(r => fetchRepositories(pid, r.id))
+        await Promise.all(promises)
+      } finally {
+        loading.value = false
+      }
   }
 
   const refreshStructure = async () => {

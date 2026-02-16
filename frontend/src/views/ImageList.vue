@@ -163,6 +163,18 @@ watch(() => route.fullPath, () => {
     fetchData()
 })
 
+watch(() => store.images, (newImages) => {
+    // Filter selection to only include images that still exist
+    const currentDigests = new Set(newImages.map(img => img.digest))
+    const toRemove = []
+    for (const digest of selectedImages.value) {
+        if (!currentDigests.has(digest)) {
+            toRemove.push(digest)
+        }
+    }
+    toRemove.forEach(d => selectedImages.value.delete(d))
+}, { deep: true })
+
 const toggleSelection = (digest: string) => {
     if (selectedImages.value.has(digest)) {
         selectedImages.value.delete(digest)
