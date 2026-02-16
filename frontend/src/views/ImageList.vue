@@ -45,15 +45,30 @@
         <div class="item-info">
           <div class="digest-row">
             <span class="digest" :title="image.digest">{{ image.digest }}</span>
-            <button class="copy-btn" @click="copyToClipboard(image.digest)" title="Copy Digest">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+            <button class="copy-btn" @click="copyToClipboard(image.digest, image.digest)" title="Copy Digest">
+                <span v-if="copiedState[image.digest]" class="success-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-lg" viewBox="0 0 16 16">
+                        <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"/>
+                    </svg>
+                </span>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
                     <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
                     <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
                 </svg>
             </button>
           </div>
           <div class="tags">
-            <span v-for="tag in image.tags" :key="tag" class="tag">{{ tag }}</span>
+            <span
+                v-for="tag in image.tags"
+                :key="tag"
+                class="tag"
+                :class="{ 'copied': copiedState[image.digest + tag] }"
+                @click="copyToClipboard(tag, image.digest + tag)"
+                title="Click to copy tag"
+            >
+                {{ tag }}
+                <span v-if="copiedState[image.digest + tag]" class="tag-check">✓</span>
+            </span>
             <span v-if="!image.tags || image.tags.length === 0" class="no-tags">No tags</span>
           </div>
           <div class="item-meta">
@@ -111,6 +126,7 @@ const selectedImages = ref(new Set<string>())
 const deleteWithGC = ref(true)
 const deleteModal = ref<HTMLDialogElement | null>(null)
 const searchQuery = ref("")
+const copiedState = ref<Record<string, boolean>>({})
 
 const filteredImages = computed(() => {
     if (!searchQuery.value) return store.images
@@ -185,8 +201,13 @@ const deleteImg = async (digest: string) => {
   }
 }
 
-const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).catch(err => {
+const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+        copiedState.value[id] = true
+        setTimeout(() => {
+            copiedState.value[id] = false
+        }, 2000)
+    }).catch(err => {
         console.error('Failed to copy text: ', err)
     })
 }
@@ -293,10 +314,21 @@ const deleteRepo = async () => {
     color: $secondary-color;
     display: flex;
     align-items: center;
+    margin-left: 0.5rem;
 
     &:hover {
         color: $primary-color;
     }
+
+    .success-icon {
+        color: #10b981;
+        animation: scaleIn 0.2s ease-out;
+    }
+}
+
+@keyframes scaleIn {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
 }
 
 .tags {
@@ -313,6 +345,25 @@ const deleteRepo = async () => {
   border-radius: 1rem;
   font-size: 0.85rem;
   font-family: monospace;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+
+  &:hover {
+      background-color: color.adjust($muted-bg, $lightness: 10%);
+  }
+
+  &.copied {
+      background-color: #10b981; // Green
+      color: white;
+  }
+}
+
+.tag-check {
+    font-size: 0.7rem;
+    font-weight: bold;
 }
 
 .no-tags {
