@@ -1,54 +1,91 @@
 <template>
   <div class="app-layout">
     <header class="app-header">
-      <div class="logo">
-        <router-link to="/">CRaaS Console</router-link>
+      <div class="header-left">
+        <button class="mobile-toggle" @click="toggleSidebar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <div class="logo">
+          <router-link to="/">CRaaS Console</router-link>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <ProjectSelector />
+      </div>
+
+      <div class="header-right">
+        <!-- User profile or settings could go here -->
       </div>
     </header>
-    <main class="app-content">
-      <div class="breadcrumbs" v-if="breadcrumbs.length">
-        <span v-for="(crumb, index) in breadcrumbs" :key="index">
-          <router-link v-if="crumb.to" :to="crumb.to">{{ crumb.label }}</router-link>
-          <span v-else>{{ crumb.label }}</span>
-          <span v-if="index < breadcrumbs.length - 1" class="separator">/</span>
-        </span>
-      </div>
-      <slot />
-    </main>
+
+    <div class="app-body">
+      <aside class="sidebar-container" :class="{ open: sidebarOpen }">
+        <RepositorySidebar />
+      </aside>
+
+      <main class="app-content" @click="closeSidebarIfMobile">
+        <!-- Breadcrumbs can stay, but maybe simplified -->
+        <div class="breadcrumbs" v-if="breadcrumbs.length > 0">
+           <span v-for="(crumb, index) in breadcrumbs" :key="index">
+            <router-link v-if="crumb.to" :to="crumb.to">{{ crumb.label }}</router-link>
+            <span v-else>{{ crumb.label }}</span>
+            <span v-if="index < breadcrumbs.length - 1" class="separator">/</span>
+          </span>
+        </div>
+
+        <slot />
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import ProjectSelector from './ProjectSelector.vue'
+import RepositorySidebar from './RepositorySidebar.vue'
 
 const route = useRoute()
+const sidebarOpen = ref(false)
+
+const toggleSidebar = () => {
+  sidebarOpen.value = !sidebarOpen.value
+}
+
+const closeSidebarIfMobile = () => {
+    if (window.innerWidth < 768) {
+        sidebarOpen.value = false
+    }
+}
 
 const breadcrumbs = computed(() => {
   const crumbs = []
-  crumbs.push({ label: 'Projects', to: '/' })
+  // Base crumb?
+  // crumbs.push({ label: 'Home', to: '/' })
 
   const pid = route.params.pid as string
   const rid = route.params.rid as string
   const rname = route.params.rname as string
 
+  // With the new layout, Project and Repo selection are "primary" nav.
+  // Breadcrumbs might be useful for context.
+
   if (pid) {
-    crumbs.push({ label: `Project ${pid}`, to: `/projects/${pid}/registries` })
-  }
-  if (rid) {
-     crumbs.push({ label: `Registry ${rid}`, to: `/projects/${pid}/registries/${rid}/repositories` })
-  }
-  if (rname) {
-      const encodedRname = encodeURIComponent(rname)
-      crumbs.push({ label: `Repo ${rname}`, to: `/projects/${pid}/registries/${rid}/repositories/${encodedRname}/images` })
+      // We don't really have a "Project Dashboard" yet, but link to root?
+      // crumbs.push({ label: `Project ${pid}`, to: `/` })
   }
 
-  // If we are on the current page, we might want to disable the link, but Vue Router handles active links well.
-  // We can remove the 'to' from the last crumb if desired.
-  if (crumbs.length > 0) {
-      const last = crumbs[crumbs.length - 1]
-      // Check if last crumb matches current path?
-      // Simplified: just let it be a link to self.
+  if (rid) {
+      crumbs.push({ label: `Registry ${rid}`, to: `/projects/${pid}/registries/${rid}` })
+  }
+
+  if (rname) {
+      crumbs.push({ label: `Repo ${rname}`, to: `/projects/${pid}/registries/${rid}/repositories/${encodeURIComponent(rname)}` })
   }
 
   return crumbs
@@ -62,62 +99,104 @@ const breadcrumbs = computed(() => {
 .app-layout {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .app-header {
-  background-color: rgba($card-bg, 0.95);
-  backdrop-filter: blur(10px);
-  color: $text-color;
-  padding: 1rem 2rem;
+  background-color: $card-bg;
+  border-bottom: 1px solid $border-color;
+  height: 64px;
   display: flex;
   align-items: center;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border-bottom: 1px solid $border-color;
-  position: sticky;
-  top: 0;
+  justify-content: space-between;
+  padding: 0 1rem;
+  flex-shrink: 0;
   z-index: 50;
 
+  .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+  }
+
   .logo a {
-    color: $primary-color;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
     text-decoration: none;
-    background: linear-gradient(135deg, $primary-color, color.adjust($primary-color, $lightness: 20%));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-
-    &:hover {
-        opacity: 0.8;
-    }
+    color: $primary-color;
   }
 }
 
+.mobile-toggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: $text-color;
+
+    @media (max-width: 768px) {
+        display: block;
+    }
+}
+
+.app-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.sidebar-container {
+    width: 300px;
+    height: 100%;
+    border-right: 1px solid $border-color;
+    background: $card-bg;
+    transition: transform 0.3s ease;
+
+    @media (max-width: 768px) {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 40;
+        transform: translateX(-100%);
+        box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+
+        &.open {
+            transform: translateX(0);
+        }
+    }
+}
+
 .app-content {
-  flex: 1;
-  padding: 2rem;
-  max-width: 1200px;
-  width: 100%;
-  margin: 0 auto;
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem;
+    background-color: $background-color;
+
+    @media (max-width: 768px) {
+        padding: 1rem;
+    }
 }
 
 .breadcrumbs {
   margin-bottom: 1.5rem;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: $secondary-color;
-  background: $card-bg;
-  padding: 0.75rem 1rem;
-  border-radius: 4px;
-  border: 1px solid $border-color;
 
   a {
-    color: #6ea8fe;
-    font-weight: 500;
+      color: $primary-color;
+      text-decoration: none;
+
+      &:hover {
+          text-decoration: underline;
+      }
   }
 
   .separator {
-    margin: 0 0.5rem;
-    color: $secondary-color;
+      margin: 0 0.5rem;
+      color: $border-color;
   }
 }
 </style>
