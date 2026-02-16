@@ -29,6 +29,10 @@ func (s *Server) ListRepositories(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) DeleteRepository(w http.ResponseWriter, r *http.Request) {
+	if !s.checkDeleteRepository(w) {
+		return
+	}
+
 	pid := chi.URLParam(r, "pid")
 	rid := chi.URLParam(r, "rid")
 	rname := r.URL.Query().Get("name")
@@ -51,6 +55,10 @@ func (s *Server) DeleteRepository(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) CleanupRepository(w http.ResponseWriter, r *http.Request) {
+	if !s.checkDeleteImage(w) {
+		return
+	}
+
 	pid := chi.URLParam(r, "pid")
 	rid := chi.URLParam(r, "rid")
 	rname := r.URL.Query().Get("repository")

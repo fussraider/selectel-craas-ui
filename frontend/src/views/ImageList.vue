@@ -2,7 +2,14 @@
   <div class="view-container">
     <div class="header">
       <h1>Images ({{ rname }})</h1>
-      <button @click="openDeleteRepoModal" class="btn danger-outline">Delete Repository</button>
+      <button
+          @click="openDeleteRepoModal"
+          class="btn danger-outline"
+          :disabled="!configStore.enableDeleteRepository"
+          :title="!configStore.enableDeleteRepository ? 'Disabled by environment configuration' : ''"
+      >
+          Delete Repository
+      </button>
     </div>
 
     <div v-if="store.imagesLoading" class="loading">Loading images...</div>
@@ -32,7 +39,13 @@
              <input type="text" v-model="searchQuery" placeholder="Search by tag..." class="search-input" />
          </div>
 
-         <button :class="{ 'hidden-btn': selectedImages.size === 0 }" @click="openBulkDeleteModal" class="bulk-delete-btn" :disabled="selectedImages.size === 0">
+         <button
+             :class="{ 'hidden-btn': selectedImages.size === 0 }"
+             @click="openBulkDeleteModal"
+             class="bulk-delete-btn"
+             :disabled="selectedImages.size === 0 || !configStore.enableDeleteImage"
+             :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : ''"
+         >
             Delete Selected ({{ selectedImages.size }})
          </button>
       </div>
@@ -76,7 +89,12 @@
             <span>Created: {{ new Date(image.createdAt).toLocaleString() }}</span>
           </div>
         </div>
-        <button @click="openDeleteImageModal(image.digest)" class="delete-btn" title="Delete Image">
+        <button
+            @click="openDeleteImageModal(image.digest)"
+            class="delete-btn"
+            title="Delete Image"
+            :disabled="!configStore.enableDeleteImage"
+        >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
                 <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
                 <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
@@ -93,12 +111,14 @@
     :title="modalState.title"
     :message="modalState.message"
     :is-danger="true"
-    confirm-text="Delete"
+    :confirm-text="modalState.type === 'repo' ? 'Delete Repository' : 'Delete'"
+    :verification-value="modalState.verificationValue"
     @update:is-open="modalState.isOpen = $event"
     @confirm="handleModalConfirm"
     @cancel="closeModal"
   >
-    <div v-if="modalState.type === 'bulk'" class="form-group">
+    <!-- Checkbox for both Single and Bulk deletion -->
+    <div v-if="modalState.type === 'bulk' || modalState.type === 'single'" class="form-group">
       <label>
           <input type="checkbox" v-model="deleteWithGC">
           Run garbage collection?
@@ -111,6 +131,7 @@
 
 <script setup lang="ts">
 import { useRegistryStore } from '@/stores/registry'
+import { useConfigStore } from '@/stores/config'
 import { onMounted, computed, ref, watch, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ToastNotification from '@/components/ToastNotification.vue'
@@ -119,6 +140,7 @@ import ConfirmModal from '@/components/ConfirmModal.vue'
 const router = useRouter()
 const route = useRoute()
 const store = useRegistryStore()
+const configStore = useConfigStore()
 const pid = computed(() => route.params.pid as string)
 const rid = computed(() => route.params.rid as string)
 const rname = computed(() => route.params.rname as string)
@@ -134,7 +156,8 @@ const modalState = reactive({
   type: 'single' as 'single' | 'bulk' | 'repo',
   title: '',
   message: '',
-  targetDigest: ''
+  targetDigest: '',
+  verificationValue: undefined as string | undefined
 })
 
 const filteredImages = computed(() => {
@@ -197,6 +220,7 @@ const openDeleteImageModal = (digest: string) => {
     modalState.targetDigest = digest
     modalState.title = 'Delete Image'
     modalState.message = `Are you sure you want to delete image ${digest}? This cannot be undone.`
+    modalState.verificationValue = undefined
     modalState.isOpen = true
 }
 
@@ -204,6 +228,7 @@ const openBulkDeleteModal = () => {
     modalState.type = 'bulk'
     modalState.title = 'Confirm Bulk Deletion'
     modalState.message = `Are you sure you want to delete ${selectedImages.value.size} selected images?`
+    modalState.verificationValue = undefined
     modalState.isOpen = true
 }
 
@@ -211,6 +236,7 @@ const openDeleteRepoModal = () => {
     modalState.type = 'repo'
     modalState.title = 'Delete Repository'
     modalState.message = `Are you sure you want to delete repository '${rname.value}'? All images within it will be permanently lost.`
+    modalState.verificationValue = rname.value
     modalState.isOpen = true
 }
 
@@ -220,10 +246,17 @@ const closeModal = () => {
 }
 
 const handleModalConfirm = async () => {
-    modalState.isOpen = false // Close immediately or wait? Ideally wait, but store handles errors with toasts
+    modalState.isOpen = false
     try {
         if (modalState.type === 'single') {
-            await store.deleteImage(pid.value, rid.value, rname.value, modalState.targetDigest)
+            // Use cleanupRepository instead of deleteImage to support disable_gc option
+            await store.cleanupRepository(
+                pid.value,
+                rid.value,
+                rname.value,
+                [modalState.targetDigest],
+                !deleteWithGC.value
+            )
         } else if (modalState.type === 'bulk') {
             await store.cleanupRepository(
                 pid.value,
@@ -287,8 +320,15 @@ const copyToClipboard = (text: string, id: string) => {
         border: 1px solid $danger-color;
         color: $danger-color;
 
-        &:hover {
+        &:hover:not(:disabled) {
             background: rgba($danger-color, 0.1);
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: rgba($danger-color, 0.3);
+            color: rgba($danger-color, 0.5);
         }
     }
 }
@@ -422,8 +462,13 @@ const copyToClipboard = (text: string, id: string) => {
   margin-top: -0.25rem;
   flex: 0 0 auto;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: rgba(220, 53, 69, 0.1);
+  }
+
+  &:disabled {
+      color: rgba($danger-color, 0.5);
+      cursor: not-allowed;
   }
 }
 
@@ -495,13 +540,43 @@ const copyToClipboard = (text: string, id: string) => {
     font-size: 0.9rem;
     transition: opacity 0.2s, background-color 0.2s;
 
-    &:hover {
+    &:hover:not(:disabled) {
         background-color: color.adjust($danger-color, $lightness: -10%);
     }
 
     &.hidden-btn {
         opacity: 0;
         pointer-events: none;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+.modal {
+    border: none;
+    border-radius: 8px;
+    padding: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    max-width: 500px;
+    width: 90%;
+    background: $modal-bg;
+    color: $text-color;
+
+    &::backdrop {
+        background: rgba(0, 0, 0, 0.7);
+    }
+}
+
+.modal-content {
+    padding: 2rem;
+
+    h2 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        color: $text-color;
     }
 }
 
@@ -520,6 +595,39 @@ const copyToClipboard = (text: string, id: string) => {
         font-size: 0.85rem;
         color: $secondary-color;
         margin-top: 0.25rem;
+    }
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+
+    button {
+        padding: 0.6rem 1.2rem;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .cancel-btn {
+        background: $muted-bg;
+        color: $text-color;
+
+        &:hover {
+            background: color.adjust($muted-bg, $lightness: -10%);
+        }
+    }
+
+    .confirm-btn {
+        background: $danger-color;
+        color: white;
+
+        &:hover {
+            background: color.adjust($danger-color, $lightness: -10%);
+        }
     }
 }
 </style>

@@ -57,6 +57,10 @@ func (s *Server) ListTags(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) DeleteImage(w http.ResponseWriter, r *http.Request) {
+	if !s.checkDeleteImage(w) {
+		return
+	}
+
 	pid := chi.URLParam(r, "pid")
 	rid := chi.URLParam(r, "rid")
 	digest := chi.URLParam(r, "digest")

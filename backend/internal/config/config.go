@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -15,6 +16,11 @@ type Config struct {
 	SelectelProjectName string
 	LogLevel            string // "debug", "info", "warn", "error"
 	LogFormat           string // "text", "json"
+
+	// Feature Flags
+	EnableDeleteRegistry   bool
+	EnableDeleteRepository bool
+	EnableDeleteImage      bool
 }
 
 func Load() (*Config, error) {
@@ -31,12 +37,26 @@ func Load() (*Config, error) {
 		SelectelProjectName: getEnv("SELECTEL_PROJECT_NAME", ""),
 		LogLevel:            getEnv("LOG_LEVEL", "INFO"),
 		LogFormat:           getEnv("LOG_FORMAT", "TEXT"),
+
+		EnableDeleteRegistry:   getEnvBool("ENABLE_DELETE_REGISTRY", false),
+		EnableDeleteRepository: getEnvBool("ENABLE_DELETE_REPOSITORY", false),
+		EnableDeleteImage:      getEnvBool("ENABLE_DELETE_IMAGE", false),
 	}, nil
 }
 
 func getEnv(key, fallback string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
+	}
+	return fallback
+}
+
+func getEnvBool(key string, fallback bool) bool {
+	if value, exists := os.LookupEnv(key); exists {
+		if boolVal, err := strconv.ParseBool(value); err == nil {
+			return boolVal
+		}
+		log.Printf("Warning: Invalid boolean value for env %s: %s. Using fallback %v", key, value, fallback)
 	}
 	return fallback
 }

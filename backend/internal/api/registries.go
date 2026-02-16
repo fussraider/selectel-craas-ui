@@ -27,6 +27,10 @@ func (s *Server) ListRegistries(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) DeleteRegistry(w http.ResponseWriter, r *http.Request) {
+	if !s.checkDeleteRegistry(w) {
+		return
+	}
+
 	pid := chi.URLParam(r, "pid")
 	rid := chi.URLParam(r, "rid")
 	s.Logger.Info("deleting registry request", "project_id", pid, "registry_id", rid)

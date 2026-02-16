@@ -1,6 +1,14 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
+import { useConfigStore } from '@/stores/config'
+
+const configStore = useConfigStore()
+
+onMounted(() => {
+    configStore.fetchConfig()
+})
 </script>
 
 <template>
