@@ -5,7 +5,7 @@
       <button @click="deleteRepo" class="btn danger-outline">Delete Repository</button>
     </div>
 
-    <div v-if="store.loading" class="loading">Loading images...</div>
+    <div v-if="store.imagesLoading" class="loading">Loading images...</div>
 
     <!-- Toast Notifications -->
     <ToastNotification
@@ -21,7 +21,7 @@
       @close="store.clearNotifications"
     />
 
-    <div v-if="!store.loading" class="list-container">
+    <div v-if="!store.imagesLoading" class="list-container">
       <div class="list-controls" v-if="store.images.length > 0">
          <div class="select-all">
             <input type="checkbox" id="selectAll" :checked="allSelected" @change="toggleSelectAll" />
