@@ -51,8 +51,11 @@ export const useRegistryStore = defineStore('registry', () => {
 
   const selectedProjectId = ref<string | null>(null)
 
-  const loading = ref(false)
-  const gcLoading = ref(false)
+  // Loading states
+  const loading = ref(false) // General/Structure loading
+  const imagesLoading = ref(false) // Image list loading
+  const gcLoading = ref(false) // GC info/action loading
+
   const error = ref<string | null>(null)
   const success = ref<string | null>(null)
 
@@ -183,7 +186,7 @@ export const useRegistryStore = defineStore('registry', () => {
   }
 
   const fetchImages = async (pid: string, rid: string, rname: string) => {
-      loading.value = true
+      imagesLoading.value = true
       clearNotifications()
       try {
           const res = await axios.get(`/api/projects/${pid}/registries/${rid}/images`, { params: { repository: rname } })
@@ -191,12 +194,12 @@ export const useRegistryStore = defineStore('registry', () => {
       } catch (err) {
           handleError(err)
       } finally {
-          loading.value = false
+          imagesLoading.value = false
       }
   }
 
   const deleteImage = async (pid: string, rid: string, rname: string, digest: string) => {
-      loading.value = true
+      imagesLoading.value = true
       clearNotifications()
       try {
           await axios.delete(`/api/projects/${pid}/registries/${rid}/images/${digest}`, { params: { repository: rname } })
@@ -206,12 +209,12 @@ export const useRegistryStore = defineStore('registry', () => {
           handleError(err)
           throw err
       } finally {
-          loading.value = false
+          imagesLoading.value = false
       }
   }
 
   const cleanupRepository = async (pid: string, rid: string, rname: string, digests: string[], disableGC: boolean = false) => {
-      loading.value = true
+      imagesLoading.value = true
       clearNotifications()
       try {
           const res = await axios.post<CleanupResult>(`/api/projects/${pid}/registries/${rid}/cleanup`, {
@@ -227,7 +230,7 @@ export const useRegistryStore = defineStore('registry', () => {
           handleError(err)
           throw err
       } finally {
-          loading.value = false
+          imagesLoading.value = false
       }
   }
 
@@ -265,6 +268,7 @@ export const useRegistryStore = defineStore('registry', () => {
       gcInfo,
       selectedProjectId,
       loading,
+      imagesLoading,
       gcLoading,
       error,
       success,
