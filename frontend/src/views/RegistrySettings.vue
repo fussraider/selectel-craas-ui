@@ -64,14 +64,15 @@
                 <h4>Delete Registry</h4>
                 <p>This action cannot be undone. All repositories and images will be lost.</p>
             </div>
-            <button
-                @click="openDeleteModal"
-                :disabled="store.loading || !configStore.enableDeleteRegistry"
-                class="btn danger"
-                :title="!configStore.enableDeleteRegistry ? 'Disabled by environment configuration' : ''"
-            >
-                Delete Registry
-            </button>
+            <span :title="!configStore.enableDeleteRegistry ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper">
+                <button
+                    @click="openDeleteModal"
+                    :disabled="store.loading || !configStore.enableDeleteRegistry"
+                    class="btn danger"
+                >
+                    Delete Registry
+                </button>
+            </span>
         </div>
     </div>
 
@@ -307,5 +308,14 @@ const confirmDelete = async () => {
     background-color: rgba(#198754, 0.1);
     color: #198754;
     border-radius: 4px;
+}
+
+.tooltip-wrapper {
+    display: inline-block;
+    cursor: help;
+}
+
+.btn:disabled {
+    pointer-events: none;
 }
 </style>
