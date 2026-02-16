@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import ProjectSelect from '../views/ProjectSelect.vue'
-import RegistryList from '../views/RegistryList.vue'
-import RepoList from '../views/RepoList.vue'
+import HomeView from '../views/HomeView.vue'
+import RegistrySettings from '../views/RegistrySettings.vue'
 import ImageList from '../views/ImageList.vue'
 
 const router = createRouter({
@@ -10,23 +9,25 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: ProjectSelect,
+      component: HomeView,
     },
     {
-      path: '/projects/:pid/registries',
-      name: 'registries',
-      component: RegistryList,
+      path: '/projects/:pid/registries/:rid',
+      name: 'registry-settings',
+      component: RegistrySettings,
     },
     {
-      path: '/projects/:pid/registries/:rid/repositories',
-      name: 'repositories',
-      component: RepoList,
-    },
-    {
-      path: '/projects/:pid/registries/:rid/repositories/:rname/images',
+      path: '/projects/:pid/registries/:rid/repositories/:rname',
       name: 'images',
       component: ImageList,
     },
+    // Keep the old route as redirect or alias if needed, but for now we simplify
+    {
+      path: '/projects/:pid/registries/:rid/repositories/:rname/images',
+      redirect: to => {
+        return { name: 'images', params: to.params }
+      }
+    }
   ],
 })
 

@@ -2,6 +2,7 @@
   <div class="view-container">
     <div class="header">
       <h1>Images ({{ rname }})</h1>
+      <button @click="deleteRepo" class="btn danger-outline">Delete Repository</button>
     </div>
 
     <div v-if="store.loading" class="loading">Loading images...</div>
@@ -92,6 +93,9 @@ import { onMounted, computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import ToastNotification from '@/components/ToastNotification.vue'
 
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 const route = useRoute()
 const store = useRegistryStore()
 const pid = computed(() => route.params.pid as string)
@@ -162,6 +166,17 @@ const copyToClipboard = (text: string) => {
         console.error('Failed to copy text: ', err)
     })
 }
+
+const deleteRepo = async () => {
+  if (confirm(`Are you sure you want to delete repository '${rname.value}'? All images within it will be lost.`)) {
+    try {
+        await store.deleteRepository(pid.value, rid.value, rname.value)
+        router.push('/')
+    } catch (e) {
+        // Error handling is done in store
+    }
+  }
+}
 </script>
 
 <style scoped lang="scss">
@@ -169,10 +184,35 @@ const copyToClipboard = (text: string) => {
 @use '@/assets/main.scss' as *;
 
 .view-container {
-  h1 {
-    margin-bottom: 2rem;
-    color: $primary-color;
+  .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+
+      h1 {
+        margin: 0;
+        color: $primary-color;
+      }
   }
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &.danger-outline {
+        background: transparent;
+        border: 1px solid $danger-color;
+        color: $danger-color;
+
+        &:hover {
+            background: rgba($danger-color, 0.1);
+        }
+    }
 }
 
 .list-container {
