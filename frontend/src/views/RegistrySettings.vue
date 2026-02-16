@@ -87,17 +87,19 @@ const rid = computed(() => route.params.rid as string)
 
 const registry = computed(() => store.registries.find(r => r.id === rid.value))
 
-onMounted(() => {
+const fetchData = () => {
     store.clearNotifications()
-    if (pid.value && rid.value) {
-        store.fetchGCInfo(pid.value, rid.value)
+    if (route.params.pid && route.params.rid) {
+        store.fetchGCInfo(route.params.pid as string, route.params.rid as string)
     }
+}
+
+onMounted(() => {
+    fetchData()
 })
 
-watch(() => rid.value, (newRid) => {
-    if (newRid && pid.value) {
-        store.fetchGCInfo(pid.value, newRid)
-    }
+watch(() => route.fullPath, () => {
+    fetchData()
 })
 
 const triggerGC = async () => {
