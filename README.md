@@ -9,13 +9,18 @@ A modern, full-stack web interface for managing Selectel Container Registry (CRa
 -   **Image Management**: List images with detailed metadata (tags, size, creation date).
 -   **Bulk Cleanup**: Select multiple images to delete at once.
 -   **Garbage Collection Control**: Option to trigger Garbage Collection (GC) immediately upon deletion.
--   **Clipboard Support**: Easily copy image digests.
--   **Responsive UI**: Built with Vue 3 and modern SCSS for a clean dark-mode experience.
+-   **Destructive Action Guards**:
+    -   Confirmation modals for deleting registries and repositories require typing the resource name for verification.
+    -   Single image deletion now supports the "Run GC" option via a unified confirmation dialog.
+-   **Configuration Control**: Environment-based feature flags to disable destructive actions (registry, repository, or image deletion).
+-   **Optimistic UI Updates**: Immediate feedback on deletion actions without waiting for full list re-fetching.
+-   **Responsive UI**: Built with Vue 3 and modern SCSS for a clean dark-mode experience, with responsive sidebar and tooltips for disabled actions.
 
 ## Tech Stack
 
 -   **Backend**: Go 1.24+ (Chi router, Selectel SDK, Slog logging).
 -   **Frontend**: Vue 3, TypeScript, Pinia (Setup Stores), Vite.
+-   **Testing**: Playwright for frontend verification.
 
 ## Prerequisites
 
@@ -25,15 +30,34 @@ A modern, full-stack web interface for managing Selectel Container Registry (CRa
 
 ## Configuration
 
-1.  Copy `.env.example` to `backend/.env` (or set environment variables directly).
-2.  Fill in your Selectel credentials:
+The application is configured via environment variables. You can set these directly or use a `.env` file in the `backend/` directory.
 
-```bash
-WEB_PORT=8080
-SELECTEL_USERNAME=your_username
-SELECTEL_ACCOUNT_ID=your_account_id
-SELECTEL_PASSWORD=your_password
-```
+### Core Configuration
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `WEB_PORT` | Port for the backend server | `8080` |
+| `SELECTEL_USERNAME` | Selectel Username | (Required) |
+| `SELECTEL_ACCOUNT_ID` | Selectel Account ID | (Required) |
+| `SELECTEL_PASSWORD` | Selectel Password | (Required) |
+| `SELECTEL_PROJECT_NAME` | Selectel Project Name (Optional) | `""` |
+
+### Feature Flags (Destructive Actions)
+
+Control which delete operations are permitted. If disabled, the corresponding buttons in the UI will be inactive with a tooltip explaining the restriction.
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `ENABLE_DELETE_REGISTRY` | Allow deletion of entire registries | `false` |
+| `ENABLE_DELETE_REPOSITORY` | Allow deletion of repositories | `false` |
+| `ENABLE_DELETE_IMAGE` | Allow deletion of images (single or bulk) | `false` |
+
+### Logging
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `LOG_LEVEL` | Logging level (`debug`, `info`, `warn`, `error`) | `INFO` |
+| `LOG_FORMAT` | Log format (`text`, `json`) | `TEXT` |
 
 ## Running the Application
 
@@ -82,16 +106,19 @@ make run-frontend
 -   `backend/`: Go backend source code.
     -   `cmd/server`: Entry point.
     -   `internal/auth`: Selectel Keystone authentication.
-    -   `internal/craas`: CRaaS service integration (refactored into modular services).
-    -   `internal/api`: REST API handlers.
+    -   `internal/config`: Configuration loading and feature flags.
+    -   `internal/craas`: CRaaS service integration (modularized services).
+    -   `internal/api`: REST API handlers (split by domain: projects, registries, repositories, images).
 -   `frontend/`: Vue frontend source code.
-    -   `src/stores`: Pinia stores for state management (using Setup Store syntax).
+    -   `src/api`: Centralized Axios client.
+    -   `src/stores`: Pinia stores for state management (Registry, Config).
     -   `src/views`: Vue components for pages.
-    -   `src/components`: Reusable UI components (e.g., ToastNotification).
+    -   `src/components`: Reusable UI components (ConfirmModal, ToastNotification).
+    -   `src/types`: Centralized TypeScript interfaces.
 
 ## Key Improvements
 
+-   **Refactored Architecture**: Backend handlers are now domain-specific, reducing code duplication via shared middleware for token management. Frontend uses a centralized API client and type definitions.
 -   **Concurrency**: Image tag verification uses `errgroup` for efficient parallel fetching.
--   **Architecture**: Modular backend service structure (Images, Registries, Repositories separated).
--   **UX**: Real-time feedback with Toast notifications for success/error states.
--   **Robustness**: Graceful shutdown and improved error handling throughout the stack.
+-   **User Safety**: "Destructive Action Guards" require explicit confirmation (typing the resource name) for critical deletions.
+-   **Optimized UX**: Single image deletion now uses the bulk cleanup endpoint to allow optional Garbage Collection control, and UI updates are optimistic.

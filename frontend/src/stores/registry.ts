@@ -1,47 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import axios from 'axios'
-
-export interface Project {
-  id: string
-  name: string
-}
-
-export interface Registry {
-  id: string
-  name: string
-  status: string
-  createdAt: string
-  size: number
-  // Extended for UI
-  repositories?: Repository[]
-  loadingRepos?: boolean
-  expanded?: boolean
-}
-
-export interface Repository {
-  name: string
-  size: number
-  updatedAt: string
-}
-
-export interface Image {
-  digest: string
-  tags: string[]
-  size: number
-  createdAt: string
-}
-
-export interface CleanupResult {
-    deleted: any[]
-    failed: any[]
-}
-
-export interface GCInfo {
-  sizeNonReferenced: number
-  sizeSummary: number
-  sizeUntagged: number
-}
+import client, { formatError } from '@/api/client'
+import type { Project, Registry, Repository, Image, GCInfo, CleanupResult } from '@/types'
 
 export const useRegistryStore = defineStore('registry', () => {
   const projects = ref<Project[]>([])
@@ -61,14 +21,7 @@ export const useRegistryStore = defineStore('registry', () => {
 
   const handleError = (err: unknown) => {
     console.error(err)
-    if (axios.isAxiosError(err)) {
-        const msg = err.response?.data?.error || err.response?.data || err.message
-        error.value = typeof msg === 'string' ? msg : JSON.stringify(msg)
-    } else if (err instanceof Error) {
-        error.value = err.message
-    } else {
-        error.value = String(err)
-    }
+    error.value = formatError(err)
   }
 
   const clearNotifications = () => {
@@ -80,7 +33,7 @@ export const useRegistryStore = defineStore('registry', () => {
     loading.value = true
     clearNotifications()
     try {
-      const res = await axios.get('/api/projects')
+      const res = await client.get<Project[]>('/projects')
       projects.value = res.data
 
       // Auto-select first project if none selected and list not empty
@@ -95,10 +48,10 @@ export const useRegistryStore = defineStore('registry', () => {
   }
 
   const fetchRegistries = async (pid: string) => {
-    loading.value = true
+    // Note: External callers should manage global loading state if chained
     clearNotifications()
     try {
-      const res = await axios.get(`/api/projects/${pid}/registries`)
+      const res = await client.get<Registry[]>(`/projects/${pid}/registries`)
       // Map to add UI specific fields
       registries.value = res.data.map((r: any) => ({
           ...r,
@@ -108,8 +61,6 @@ export const useRegistryStore = defineStore('registry', () => {
       }))
     } catch (err) {
       handleError(err)
-    } finally {
-      loading.value = false
     }
   }
 
@@ -120,7 +71,7 @@ export const useRegistryStore = defineStore('registry', () => {
       }
 
       try {
-          const res = await axios.get(`/api/projects/${pid}/registries/${rid}/repositories`)
+          const res = await client.get<Repository[]>(`/projects/${pid}/registries/${rid}/repositories`)
           if (registry) {
               registry.repositories = res.data
           }
@@ -135,12 +86,17 @@ export const useRegistryStore = defineStore('registry', () => {
 
   // Orchestrator: Fetch registries then repositories for all
   const loadProjectData = async (pid: string) => {
+      loading.value = true
       selectedProjectId.value = pid
-      await fetchRegistries(pid)
+      try {
+        await fetchRegistries(pid)
 
-      // Parallel fetch repositories for all registries
-      const promises = registries.value.map(r => fetchRepositories(pid, r.id))
-      await Promise.all(promises)
+        // Parallel fetch repositories for all registries
+        const promises = registries.value.map(r => fetchRepositories(pid, r.id))
+        await Promise.all(promises)
+      } finally {
+        loading.value = false
+      }
   }
 
   const refreshStructure = async () => {
@@ -153,7 +109,7 @@ export const useRegistryStore = defineStore('registry', () => {
       loading.value = true
       clearNotifications()
       try {
-          await axios.delete(`/api/projects/${pid}/registries/${rid}`)
+          await client.delete(`/projects/${pid}/registries/${rid}`)
           registries.value = registries.value.filter(r => r.id !== rid)
           success.value = "Registry deleted successfully"
       } catch (err) {
@@ -168,7 +124,7 @@ export const useRegistryStore = defineStore('registry', () => {
       loading.value = true
       clearNotifications()
       try {
-          await axios.delete(`/api/projects/${pid}/registries/${rid}/repository`, { params: { name: rname } })
+          await client.delete(`/projects/${pid}/registries/${rid}/repository`, { params: { name: rname } })
 
           // Update local state
           const registry = registries.value.find(r => r.id === rid)
@@ -189,7 +145,7 @@ export const useRegistryStore = defineStore('registry', () => {
       imagesLoading.value = true
       clearNotifications()
       try {
-          const res = await axios.get(`/api/projects/${pid}/registries/${rid}/images`, { params: { repository: rname } })
+          const res = await client.get<Image[]>(`/projects/${pid}/registries/${rid}/images`, { params: { repository: rname } })
           images.value = res.data
       } catch (err) {
           handleError(err)
@@ -202,7 +158,7 @@ export const useRegistryStore = defineStore('registry', () => {
       imagesLoading.value = true
       clearNotifications()
       try {
-          await axios.delete(`/api/projects/${pid}/registries/${rid}/images/${digest}`, { params: { repository: rname } })
+          await client.delete(`/projects/${pid}/registries/${rid}/images/${digest}`, { params: { repository: rname } })
           images.value = images.value.filter(i => i.digest !== digest)
           success.value = "Image deleted successfully"
       } catch (err) {
@@ -217,7 +173,7 @@ export const useRegistryStore = defineStore('registry', () => {
       imagesLoading.value = true
       clearNotifications()
       try {
-          const res = await axios.post<CleanupResult>(`/api/projects/${pid}/registries/${rid}/cleanup`, {
+          const res = await client.post<CleanupResult>(`/projects/${pid}/registries/${rid}/cleanup`, {
               digests: digests,
               disable_gc: disableGC
           }, {
@@ -238,7 +194,7 @@ export const useRegistryStore = defineStore('registry', () => {
       gcLoading.value = true
       clearNotifications()
       try {
-          const res = await axios.get(`/api/projects/${pid}/registries/${rid}/gc`)
+          const res = await client.get<GCInfo>(`/projects/${pid}/registries/${rid}/gc`)
           gcInfo.value = res.data
       } catch (err) {
           handleError(err)
@@ -251,7 +207,7 @@ export const useRegistryStore = defineStore('registry', () => {
       gcLoading.value = true
       clearNotifications()
       try {
-          await axios.post(`/api/projects/${pid}/registries/${rid}/gc`)
+          await client.post(`/projects/${pid}/registries/${rid}/gc`)
           success.value = "Garbage collection initiated"
       } catch (err) {
           handleError(err)
