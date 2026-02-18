@@ -134,7 +134,7 @@ const breadcrumbs = computed(() => {
   }
 
   .logo-img {
-    height: 32px;
+    height: 50px;
     width: auto;
   }
 }
