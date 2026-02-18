@@ -29,8 +29,8 @@ export interface Image {
 }
 
 export interface CleanupResult {
-    deleted: any[]
-    failed: any[]
+    deleted: unknown[]
+    failed: unknown[]
 }
 
 export interface GCInfo {
