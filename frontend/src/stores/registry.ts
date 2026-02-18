@@ -53,7 +53,7 @@ export const useRegistryStore = defineStore('registry', () => {
     try {
       const res = await client.get<Registry[]>(`/projects/${pid}/registries`)
       // Map to add UI specific fields
-      registries.value = res.data.map((r: any) => ({
+      registries.value = res.data.map((r) => ({
           ...r,
           repositories: [],
           loadingRepos: false,
