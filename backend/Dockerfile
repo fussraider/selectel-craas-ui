@@ -2,7 +2,7 @@
 FROM golang:1.24-alpine AS builder
 
 # Install git for fetch dependencies
-RUN apk add --no-cache git
+RUN apk add --no-cache git upx
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -13,6 +13,9 @@ COPY . .
 # Build statically
 # -ldflags="-w -s" reduces binary size
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /backend ./cmd/server
+
+# Compress binary
+RUN upx --best --lzma /backend
 
 # Final stage
 FROM scratch
