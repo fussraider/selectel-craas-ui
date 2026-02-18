@@ -1,6 +1,7 @@
 .env
 *.log
 .idea
-.DS_Storebackend/server
+.DS_Store
+backend/server
 *.tar.gz
 *.zip

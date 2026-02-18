@@ -68,12 +68,14 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
           tags: |
             type=semver,pattern={{version}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
 
+      # This assumes the Dockerfile handles copying 'server' which was built in this job
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
+          file: ./backend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -109,13 +111,14 @@ jobs:
         run: npm run build
 
       - name: Archive dist
-        run: zip -r frontend-dist.zip dist
+        # Changed from zip to tar for consistency with backend
+        run: tar -czvf frontend-dist.tar.gz dist
 
       - name: Upload artifact for release
         uses: actions/upload-artifact@v4
         with:
           name: frontend-artifact
-          path: frontend/frontend-dist.zip
+          path: frontend/frontend-dist.tar.gz
           retention-days: 1
 
       - name: Log in to the Container registry
@@ -132,12 +135,14 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
           tags: |
             type=semver,pattern={{version}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
 
+      # This assumes the Dockerfile handles copying 'dist' which was built in this job
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
+          file: ./frontend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -166,5 +171,5 @@ jobs:
         with:
           files: |
             backend-linux-amd64.tar.gz
-            frontend-dist.zip
+            frontend-dist.tar.gz
           generate_release_notes: true
