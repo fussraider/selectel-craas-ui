@@ -10,7 +10,10 @@
           </svg>
         </button>
         <div class="logo">
-          <router-link to="/">CRaaS Console</router-link>
+          <router-link to="/">
+            <img src="/logo.png" alt="CRaaS Logo" class="logo-img" />
+            <span>CRaaS Console</span>
+          </router-link>
         </div>
       </div>
 
@@ -125,6 +128,14 @@ const breadcrumbs = computed(() => {
     font-weight: 700;
     text-decoration: none;
     color: $primary-color;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .logo-img {
+    height: 32px;
+    width: auto;
   }
 }
 
