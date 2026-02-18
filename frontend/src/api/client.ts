@@ -13,7 +13,7 @@ export const formatError = (err: unknown): string => {
     const data = err.response?.data
     if (typeof data === 'string') return data
     if (data && typeof data === 'object' && 'error' in data) {
-      return (data as any).error
+      return String((data as { error: unknown }).error)
     }
     return err.message
   } else if (err instanceof Error) {
