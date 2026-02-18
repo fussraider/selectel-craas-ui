@@ -1,0 +1,60 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract Registry Hostname
+        id: registry
+        run: |
+          # Gitea server URL usually includes protocol
+          URL="${{ gitea.server_url }}"
+          HOSTNAME=$(echo "$URL" | sed 's|https://||;s|http://||')
+          echo "hostname=$HOSTNAME" >> "$GITHUB_OUTPUT"
+
+      - name: Login to Gitea Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ steps.registry.outputs.hostname }}
+          username: ${{ gitea.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get Short SHA
+        id: sha
+        run: echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build and Push Backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.registry.outputs.hostname }}/${{ gitea.repository }}/backend:latest
+            ${{ steps.registry.outputs.hostname }}/${{ gitea.repository }}/backend:${{ steps.sha.outputs.short_sha }}
+
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.registry.outputs.hostname }}/${{ gitea.repository }}/frontend:latest
+            ${{ steps.registry.outputs.hostname }}/${{ gitea.repository }}/frontend:${{ steps.sha.outputs.short_sha }}
