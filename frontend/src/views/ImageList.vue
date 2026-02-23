@@ -13,7 +13,20 @@
       </span>
     </div>
 
-    <div v-if="store.imagesLoading && store.images.length === 0" class="loading">Loading images...</div>
+    <div v-if="store.imagesLoading" class="list-container skeleton-container">
+        <div v-for="n in 5" :key="n" class="list-item skeleton-item-row">
+            <div class="skeleton-checkbox"></div>
+            <div class="item-info">
+                <div class="skeleton-line width-40"></div>
+                <div class="tags-row">
+                    <div class="skeleton-tag"></div>
+                    <div class="skeleton-tag"></div>
+                    <div class="skeleton-tag"></div>
+                </div>
+                <div class="skeleton-line width-20"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- Toast Notifications -->
     <ToastNotification
@@ -243,7 +256,9 @@ const filteredImages = computed(() => {
 })
 
 const allSelected = computed(() => {
-    return filteredImages.value.length > 0 && selectedImages.value.size === filteredImages.value.length
+    if (filteredImages.value.length === 0) return false
+    const selectable = filteredImages.value.filter(img => !isProtected(img))
+    return selectable.length > 0 && selectable.every(img => selectedImages.value.has(img.digest))
 })
 
 const fetchData = async () => {
@@ -704,10 +719,12 @@ const copyToClipboard = (text: string, id: string) => {
 
 .tooltip-wrapper {
     display: inline-block;
+    vertical-align: middle;
     cursor: help;
 
     &.hidden-wrapper {
-        display: none;
+        visibility: hidden;
+        pointer-events: none;
     }
 }
 
@@ -782,4 +799,60 @@ const copyToClipboard = (text: string, id: string) => {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* Skeleton Loader */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton-item-row {
+    pointer-events: none;
+    gap: 1.25rem;
+}
+
+.skeleton-checkbox {
+    width: 16px;
+    height: 16px;
+    background: #374151; /* Match dark theme base */
+    border-radius: 4px;
+    opacity: 0.5;
+}
+
+.skeleton-line {
+    height: 1rem;
+    background: #374151;
+    background-image: linear-gradient(to right, #374151 0%, #4b5563 20%, #374151 40%, #374151 100%);
+    background-repeat: no-repeat;
+    background-size: 800px 100%;
+    animation: shimmer 1.5s infinite linear forwards;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.tags-row {
+    display: flex;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+}
+
+.skeleton-tag {
+    height: 1.4rem;
+    width: 60px;
+    background: #374151;
+    background-image: linear-gradient(to right, #374151 0%, #4b5563 20%, #374151 40%, #374151 100%);
+    background-repeat: no-repeat;
+    background-size: 800px 100%;
+    animation: shimmer 1.5s infinite linear forwards;
+    border-radius: 1rem;
+}
+
+.width-60 { width: 60%; }
+.width-40 { width: 40%; }
+.width-30 { width: 30%; }
+.width-20 { width: 20%; }
 </style>

@@ -144,6 +144,7 @@ export const useRegistryStore = defineStore('registry', () => {
 
   const fetchImages = async (pid: string, rid: string, rname: string) => {
       imagesLoading.value = true
+      images.value = []
       clearNotifications()
       try {
           const res = await client.get<Image[]>(`/projects/${pid}/registries/${rid}/images`, { params: { repository: rname } })
