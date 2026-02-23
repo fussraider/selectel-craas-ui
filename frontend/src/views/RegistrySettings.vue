@@ -4,8 +4,19 @@
       <h1>Registry Settings: {{ rid }}</h1>
     </div>
 
-    <div v-if="store.error" class="error-msg">{{ store.error }}</div>
-    <div v-if="store.success" class="success-msg">{{ store.success }}</div>
+    <!-- Toast Notifications -->
+    <ToastNotification
+      v-if="store.error"
+      type="error"
+      :message="store.error"
+      @close="store.clearNotifications"
+    />
+    <ToastNotification
+      v-if="store.success"
+      type="success"
+      :message="store.success"
+      @close="store.clearNotifications"
+    />
 
     <div class="card info-card">
         <h3>Registry Information</h3>
@@ -97,6 +108,7 @@ import { useConfigStore } from '@/stores/config'
 import { onMounted, computed, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import ToastNotification from '@/components/ToastNotification.vue'
 
 const route = useRoute()
 const router = useRouter()

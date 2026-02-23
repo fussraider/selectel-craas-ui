@@ -5,12 +5,21 @@
       <p>Select a repository from the sidebar to view images.</p>
       <p class="hint" v-if="!store.selectedProjectId">Loading projects...</p>
       <p class="hint" v-else>Current Project: {{ store.selectedProjectId }}</p>
+
+      <!-- Toast Notifications for HomeView -->
+      <ToastNotification
+        v-if="store.error"
+        type="error"
+        :message="store.error"
+        @close="store.clearNotifications"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useRegistryStore } from '@/stores/registry'
+import ToastNotification from '@/components/ToastNotification.vue'
 const store = useRegistryStore()
 </script>
 

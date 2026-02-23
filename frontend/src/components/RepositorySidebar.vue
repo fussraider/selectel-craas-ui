@@ -10,8 +10,6 @@
       </button>
     </div>
 
-    <div v-if="store.error" class="error-msg">{{ store.error }}</div>
-
     <!-- Registry Loading Skeleton -->
     <div v-if="store.loading && store.registries.length === 0" class="repo-list">
         <div v-for="i in 3" :key="i" class="skeleton-group">
