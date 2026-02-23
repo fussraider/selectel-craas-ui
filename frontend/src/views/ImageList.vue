@@ -92,7 +92,7 @@
         </div>
         <span class="tooltip-wrapper" :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : 'Delete Image'">
             <button
-                @click="openDeleteImageModal(image.digest)"
+                @click="openDeleteImageModal(image)"
                 class="delete-btn"
                 :disabled="!configStore.enableDeleteImage"
             >
@@ -119,6 +119,22 @@
     @confirm="handleModalConfirm"
     @cancel="closeModal"
   >
+    <!-- Single Deletion Details -->
+    <div v-if="modalState.type === 'single'" class="modal-detail-container">
+        <div class="modal-detail">
+            <label>Digest:</label>
+            <div class="modal-digest" :title="modalState.targetDigest">
+                {{ modalState.targetDigest }}
+            </div>
+        </div>
+        <div class="modal-detail" v-if="modalState.targetTags && modalState.targetTags.length > 0">
+            <label>Tags:</label>
+            <div class="tags">
+                <span v-for="tag in modalState.targetTags" :key="tag" class="tag">{{ tag }}</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Checkbox for both Single and Bulk deletion -->
     <div v-if="modalState.type === 'bulk' || modalState.type === 'single'" class="form-group">
       <label>
@@ -134,6 +150,7 @@
 <script setup lang="ts">
 import { useRegistryStore } from '@/stores/registry'
 import { useConfigStore } from '@/stores/config'
+import type { Image } from '@/types'
 import { onMounted, computed, ref, watch, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ToastNotification from '@/components/ToastNotification.vue'
@@ -156,7 +173,8 @@ const copiedState = ref<Record<string, boolean>>({})
 const modalState = reactive({
   isOpen: false,
   type: 'single' as 'single' | 'bulk' | 'repo',
-  targetDigest: ''
+  targetDigest: '',
+  targetTags: [] as string[]
 })
 
 const modalTitle = computed(() => {
@@ -171,7 +189,7 @@ const modalTitle = computed(() => {
 const modalMessage = computed(() => {
     switch (modalState.type) {
         case 'single':
-            return `Are you sure you want to delete image ${modalState.targetDigest}? This cannot be undone.`
+            return 'Are you sure you want to delete this image? This cannot be undone.'
         case 'bulk':
             return `Are you sure you want to delete ${selectedImages.value.size} selected images?`
         case 'repo':
@@ -244,9 +262,10 @@ const toggleSelectAll = () => {
 }
 
 // Modal Actions
-const openDeleteImageModal = (digest: string) => {
+const openDeleteImageModal = (image: Image) => {
     modalState.type = 'single'
-    modalState.targetDigest = digest
+    modalState.targetDigest = image.digest
+    modalState.targetTags = image.tags || []
     modalState.isOpen = true
 }
 
@@ -263,6 +282,7 @@ const openDeleteRepoModal = () => {
 const closeModal = () => {
     modalState.isOpen = false
     modalState.targetDigest = ''
+    modalState.targetTags = []
 }
 
 const handleModalConfirm = async () => {
@@ -662,5 +682,40 @@ const copyToClipboard = (text: string, id: string) => {
 
 .btn:disabled, .bulk-delete-btn:disabled, .delete-btn:disabled {
     pointer-events: none;
+}
+
+.modal-detail-container {
+    background: $background-color;
+    border: 1px solid $border-color;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.modal-detail {
+    label {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 0.25rem;
+        font-size: 0.85rem;
+        color: $secondary-color;
+    }
+}
+
+.modal-digest {
+    font-family: monospace;
+    background: $card-bg;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid $border-color;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
+    font-size: 0.85rem;
+    color: $text-color;
 }
 </style>
