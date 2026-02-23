@@ -7,10 +7,11 @@ import (
 
 func (s *Server) GetConfig(w http.ResponseWriter, r *http.Request) {
 	// Expose only safe configuration
-	cfg := map[string]bool{
+	cfg := map[string]interface{}{
 		"enableDeleteRegistry":   s.Config.EnableDeleteRegistry,
 		"enableDeleteRepository": s.Config.EnableDeleteRepository,
 		"enableDeleteImage":      s.Config.EnableDeleteImage,
+		"protectedTags":          s.Config.ProtectedTags,
 	}
 	RespondJSON(w, http.StatusOK, cfg)
 }

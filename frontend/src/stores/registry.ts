@@ -14,6 +14,7 @@ export const useRegistryStore = defineStore('registry', () => {
   // Loading states
   const loading = ref(false) // General/Structure loading
   const imagesLoading = ref(false) // Image list loading
+  const deletionLoading = ref(new Set<string>()) // Digests currently being deleted
   const gcLoading = ref(false) // GC info/action loading
 
   const error = ref<string | null>(null)
@@ -155,7 +156,7 @@ export const useRegistryStore = defineStore('registry', () => {
   }
 
   const deleteImage = async (pid: string, rid: string, rname: string, digest: string) => {
-      imagesLoading.value = true
+      deletionLoading.value.add(digest)
       clearNotifications()
       try {
           await client.delete(`/projects/${pid}/registries/${rid}/images/${digest}`, { params: { repository: rname } })
@@ -165,12 +166,12 @@ export const useRegistryStore = defineStore('registry', () => {
           handleError(err)
           throw err
       } finally {
-          imagesLoading.value = false
+          deletionLoading.value.delete(digest)
       }
   }
 
   const cleanupRepository = async (pid: string, rid: string, rname: string, digests: string[], disableGC: boolean = false) => {
-      imagesLoading.value = true
+      digests.forEach(d => deletionLoading.value.add(d))
       clearNotifications()
       try {
           const res = await client.post<CleanupResult>(`/projects/${pid}/registries/${rid}/cleanup`, {
@@ -186,7 +187,7 @@ export const useRegistryStore = defineStore('registry', () => {
           handleError(err)
           throw err
       } finally {
-          imagesLoading.value = false
+          digests.forEach(d => deletionLoading.value.delete(d))
       }
   }
 
@@ -225,6 +226,7 @@ export const useRegistryStore = defineStore('registry', () => {
       selectedProjectId,
       loading,
       imagesLoading,
+      deletionLoading,
       gcLoading,
       error,
       success,

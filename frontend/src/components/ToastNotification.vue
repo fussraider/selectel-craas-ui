@@ -9,14 +9,35 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { onMounted, onUnmounted } from 'vue'
+
+const props = withDefaults(defineProps<{
   message: string | null
   type: 'success' | 'error'
-}>()
+  duration?: number
+}>(), {
+  duration: 3000
+})
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'close'): void
 }>()
+
+let timer: number | undefined
+
+onMounted(() => {
+  if (props.duration > 0) {
+    timer = window.setTimeout(() => {
+      emit('close')
+    }, props.duration)
+  }
+})
+
+onUnmounted(() => {
+  if (timer) {
+    clearTimeout(timer)
+  }
+})
 </script>
 
 <style scoped lang="scss">

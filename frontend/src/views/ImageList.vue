@@ -13,7 +13,7 @@
       </span>
     </div>
 
-    <div v-if="store.imagesLoading" class="loading">Loading images...</div>
+    <div v-if="store.imagesLoading && store.images.length === 0" class="loading">Loading images...</div>
 
     <!-- Toast Notifications -->
     <ToastNotification
@@ -29,7 +29,7 @@
       @close="store.clearNotifications"
     />
 
-    <div v-if="!store.imagesLoading" class="list-container">
+    <div v-if="!store.imagesLoading || store.images.length > 0" class="list-container">
       <div class="list-controls" v-if="store.images.length > 0">
          <div class="select-all">
             <input type="checkbox" id="selectAll" :checked="allSelected" @change="toggleSelectAll" />
@@ -51,13 +51,29 @@
          </span>
       </div>
 
-      <div v-if="filteredImages.length === 0" class="empty-state">No images found.</div>
-      <div v-for="image in filteredImages" :key="image.digest" class="list-item">
+      <div v-if="filteredImages.length === 0 && !store.imagesLoading" class="empty-state">No images found.</div>
+      <div
+        v-for="image in filteredImages"
+        :key="image.digest"
+        class="list-item"
+        :class="{ 'protected-item': isProtected(image), 'deleting-item': store.deletionLoading.has(image.digest) }"
+      >
         <div class="checkbox-container">
-           <input type="checkbox" :value="image.digest" :checked="selectedImages.has(image.digest)" @change="toggleSelection(image.digest)" />
+           <input
+             type="checkbox"
+             :value="image.digest"
+             :checked="selectedImages.has(image.digest)"
+             :disabled="isProtected(image) || store.deletionLoading.has(image.digest)"
+             @change="toggleSelection(image.digest)"
+           />
         </div>
         <div class="item-info">
           <div class="digest-row">
+            <span v-if="isProtected(image)" class="protected-icon" title="This image is protected and cannot be deleted">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-shield-lock-fill" viewBox="0 0 16 16">
+                  <path fill-rule="evenodd" d="M8 0c-.69 0-1.843.265-2.928.56-1.11.3-2.229.655-2.887.87a1.54 1.54 0 0 0-1.044 1.262c-.596 4.477.787 7.795 2.465 9.99a11.777 11.777 0 0 0 2.517 2.453c.386.273.744.482 1.048.625.28.132.581.24.829.24s.548-.108.829-.24a7.159 7.159 0 0 0 1.048-.625 11.775 11.775 0 0 0 2.517-2.453c1.678-2.195 3.061-5.513 2.465-9.99a1.541 1.541 0 0 0-1.044-1.263 62.467 62.467 0 0 0-2.887-.87C9.843.266 8.69 0 8 0zm0 5a1.5 1.5 0 0 1 .5 2.915l.385 1.99a.5.5 0 0 1-.491.595h-.788a.5.5 0 0 1-.49-.595l.384-1.99A1.5 1.5 0 0 1 8 5z"/>
+                </svg>
+            </span>
             <span class="digest" :title="image.digest">{{ image.digest }}</span>
             <button class="copy-btn" @click="copyToClipboard(image.digest, image.digest)" title="Copy Digest">
                 <span v-if="copiedState[image.digest]" class="success-icon">
@@ -90,17 +106,19 @@
             <span>Created: {{ new Date(image.createdAt).toLocaleString() }}</span>
           </div>
         </div>
-        <span class="tooltip-wrapper" :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : 'Delete Image'">
+        <span class="tooltip-wrapper" :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : (isProtected(image) ? 'Protected Image' : 'Delete Image')">
             <button
-                @click="openDeleteImageModal(image.digest)"
+                v-if="!store.deletionLoading.has(image.digest)"
+                @click="openDeleteImageModal(image)"
                 class="delete-btn"
-                :disabled="!configStore.enableDeleteImage"
+                :disabled="!configStore.enableDeleteImage || isProtected(image)"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
                     <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
                     <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
                 </svg>
             </button>
+            <div v-else class="spinner-small" title="Deleting..."></div>
         </span>
       </div>
     </div>
@@ -119,6 +137,22 @@
     @confirm="handleModalConfirm"
     @cancel="closeModal"
   >
+    <!-- Single Deletion Details -->
+    <div v-if="modalState.type === 'single'" class="modal-detail-container">
+        <div class="modal-detail">
+            <label>Digest:</label>
+            <div class="modal-digest" :title="modalState.targetDigest">
+                {{ modalState.targetDigest }}
+            </div>
+        </div>
+        <div class="modal-detail" v-if="modalState.targetTags && modalState.targetTags.length > 0">
+            <label>Tags:</label>
+            <div class="tags">
+                <span v-for="tag in modalState.targetTags" :key="tag" class="tag">{{ tag }}</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Checkbox for both Single and Bulk deletion -->
     <div v-if="modalState.type === 'bulk' || modalState.type === 'single'" class="form-group">
       <label>
@@ -134,6 +168,7 @@
 <script setup lang="ts">
 import { useRegistryStore } from '@/stores/registry'
 import { useConfigStore } from '@/stores/config'
+import type { Image } from '@/types'
 import { onMounted, computed, ref, watch, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ToastNotification from '@/components/ToastNotification.vue'
@@ -147,6 +182,11 @@ const pid = computed(() => route.params.pid as string)
 const rid = computed(() => route.params.rid as string)
 const rname = computed(() => route.params.rname as string)
 
+const isProtected = (image: Image): boolean => {
+    if (!configStore.protectedTags || configStore.protectedTags.length === 0) return false
+    return !!(image.tags && image.tags.some(tag => configStore.protectedTags && configStore.protectedTags.includes(tag)))
+}
+
 const selectedImages = ref(new Set<string>())
 const deleteWithGC = ref(true)
 const searchQuery = ref("")
@@ -156,7 +196,8 @@ const copiedState = ref<Record<string, boolean>>({})
 const modalState = reactive({
   isOpen: false,
   type: 'single' as 'single' | 'bulk' | 'repo',
-  targetDigest: ''
+  targetDigest: '',
+  targetTags: [] as string[]
 })
 
 const modalTitle = computed(() => {
@@ -171,7 +212,7 @@ const modalTitle = computed(() => {
 const modalMessage = computed(() => {
     switch (modalState.type) {
         case 'single':
-            return `Are you sure you want to delete image ${modalState.targetDigest}? This cannot be undone.`
+            return 'Are you sure you want to delete this image? This cannot be undone.'
         case 'bulk':
             return `Are you sure you want to delete ${selectedImages.value.size} selected images?`
         case 'repo':
@@ -190,9 +231,13 @@ const modalVerificationValue = computed(() => {
 })
 
 const filteredImages = computed(() => {
-    if (!searchQuery.value) return store.images
+    const images = store.images.slice().sort((a, b) => {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+
+    if (!searchQuery.value) return images
     const query = searchQuery.value.toLowerCase()
-    return store.images.filter(img =>
+    return images.filter(img =>
         img.tags && img.tags.some(tag => tag.toLowerCase().includes(query))
     )
 })
@@ -239,14 +284,19 @@ const toggleSelectAll = () => {
     if (allSelected.value) {
         selectedImages.value.clear()
     } else {
-        filteredImages.value.forEach(img => selectedImages.value.add(img.digest))
+        filteredImages.value.forEach(img => {
+            if (!isProtected(img)) {
+                selectedImages.value.add(img.digest)
+            }
+        })
     }
 }
 
 // Modal Actions
-const openDeleteImageModal = (digest: string) => {
+const openDeleteImageModal = (image: Image) => {
     modalState.type = 'single'
-    modalState.targetDigest = digest
+    modalState.targetDigest = image.digest
+    modalState.targetTags = image.tags || []
     modalState.isOpen = true
 }
 
@@ -263,6 +313,7 @@ const openDeleteRepoModal = () => {
 const closeModal = () => {
     modalState.isOpen = false
     modalState.targetDigest = ''
+    modalState.targetTags = []
 }
 
 const handleModalConfirm = async () => {
@@ -662,5 +713,73 @@ const copyToClipboard = (text: string, id: string) => {
 
 .btn:disabled, .bulk-delete-btn:disabled, .delete-btn:disabled {
     pointer-events: none;
+}
+
+.modal-detail-container {
+    background: $background-color;
+    border: 1px solid $border-color;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.modal-detail {
+    label {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 0.25rem;
+        font-size: 0.85rem;
+        color: $secondary-color;
+    }
+}
+
+.modal-digest {
+    font-family: monospace;
+    background: $card-bg;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid $border-color;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
+    font-size: 0.85rem;
+    color: $text-color;
+}
+
+.protected-item {
+    background-color: rgba($primary-color, 0.05);
+    border-color: rgba($primary-color, 0.2);
+}
+
+.protected-icon {
+    color: $primary-color;
+    display: flex;
+    align-items: center;
+    margin-right: 0.25rem;
+    cursor: help;
+}
+
+.deleting-item {
+    opacity: 0.5;
+    pointer-events: none;
+    background-color: rgba($muted-bg, 0.3);
+}
+
+.spinner-small {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba($danger-color, 0.3);
+    border-radius: 50%;
+    border-top-color: $danger-color;
+    animation: spin 1s ease-in-out infinite;
+    margin: 0.5rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 </style>

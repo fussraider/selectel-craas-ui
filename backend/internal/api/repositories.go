@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -77,6 +78,54 @@ func (s *Server) CleanupRepository(w http.ResponseWriter, r *http.Request) {
 	if len(req.Digests) == 0 && len(req.Tags) == 0 {
 		http.Error(w, "digests or tags required", http.StatusBadRequest)
 		return
+	}
+
+	// Safety check: Protected Tags
+	if len(s.Config.ProtectedTags) > 0 && len(req.Digests) > 0 {
+		// We need to fetch images to check their tags against protected tags
+		// because the request only contains digests.
+		var protectedFound bool
+		var protectedTag string
+
+		err := s.ExecuteWithRetry(r.Context(), pid, func(token string) error {
+			images, err := s.Craas.ListImages(r.Context(), token, rid, rname)
+			if err != nil {
+				return err
+			}
+
+			// Build map for quick lookup
+			digestTags := make(map[string][]string)
+			for _, img := range images {
+				digestTags[img.Digest] = img.Tags
+			}
+
+			// Check requested digests
+			for _, digest := range req.Digests {
+				if tags, ok := digestTags[digest]; ok {
+					for _, tag := range tags {
+						for _, protected := range s.Config.ProtectedTags {
+							if tag == protected {
+								protectedFound = true
+								protectedTag = tag
+								return nil // Stop checking
+							}
+						}
+					}
+				}
+			}
+			return nil
+		})
+
+		if err != nil {
+			s.Logger.Error("failed to verify protected tags", "error", err)
+			RespondError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		if protectedFound {
+			http.Error(w, fmt.Sprintf("cannot delete image with protected tag: %s", protectedTag), http.StatusForbidden)
+			return
+		}
 	}
 
 	var result interface{}
