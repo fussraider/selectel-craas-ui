@@ -718,8 +718,8 @@ const copyToClipboard = (text: string, id: string) => {
 }
 
 .tooltip-wrapper {
-    display: flex;
-    align-items: center;
+    display: inline-block;
+    vertical-align: middle;
     cursor: help;
 
     &.hidden-wrapper {
