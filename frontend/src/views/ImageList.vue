@@ -722,7 +722,8 @@ const copyToClipboard = (text: string, id: string) => {
     cursor: help;
 
     &.hidden-wrapper {
-        display: none;
+        visibility: hidden;
+        pointer-events: none;
     }
 }
 
