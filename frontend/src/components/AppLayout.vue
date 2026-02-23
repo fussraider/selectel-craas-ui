@@ -18,7 +18,14 @@
       </div>
 
       <div class="header-center">
-        <ProjectSelector />
+        <!-- Breadcrumbs moved here -->
+        <div class="breadcrumbs" v-if="breadcrumbs.length > 0">
+           <span v-for="(crumb, index) in breadcrumbs" :key="index">
+            <router-link v-if="crumb.to" :to="crumb.to">{{ crumb.label }}</router-link>
+            <span v-else>{{ crumb.label }}</span>
+            <span v-if="index < breadcrumbs.length - 1" class="separator">/</span>
+          </span>
+        </div>
       </div>
 
       <div class="header-right">
@@ -32,15 +39,6 @@
       </aside>
 
       <main class="app-content" @click="closeSidebarIfMobile">
-        <!-- Breadcrumbs can stay, but maybe simplified -->
-        <div class="breadcrumbs" v-if="breadcrumbs.length > 0">
-           <span v-for="(crumb, index) in breadcrumbs" :key="index">
-            <router-link v-if="crumb.to" :to="crumb.to">{{ crumb.label }}</router-link>
-            <span v-else>{{ crumb.label }}</span>
-            <span v-if="index < breadcrumbs.length - 1" class="separator">/</span>
-          </span>
-        </div>
-
         <slot />
       </main>
     </div>
@@ -50,10 +48,28 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import ProjectSelector from './ProjectSelector.vue'
 import RepositorySidebar from './RepositorySidebar.vue'
+import { useRegistryStore } from '@/stores/registry'
+import { onMounted } from 'vue'
 
+const store = useRegistryStore()
 const route = useRoute()
+
+onMounted(async () => {
+    // Ensure project is loaded since selector is removed
+    await store.fetchProjects()
+    // Logic to select project moved to store/here if needed, but store handles auto-select on fetchProjects
+    if (store.projects.length > 0 && !store.selectedProjectId) {
+        const firstProject = store.projects[0]
+        if (firstProject) {
+            store.selectedProjectId = firstProject.id
+            await store.loadProjectData(store.selectedProjectId)
+        }
+    } else if (store.selectedProjectId) {
+        // Refresh data if ID exists
+        await store.loadProjectData(store.selectedProjectId)
+    }
+})
 const sidebarOpen = ref(false)
 
 const toggleSidebar = () => {
@@ -217,9 +233,13 @@ const breadcrumbs = computed(() => {
 }
 
 .breadcrumbs {
-  margin-bottom: 1.5rem;
   font-size: 0.9rem;
   color: $secondary-color;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 
   a {
       color: $primary-color;
@@ -234,5 +254,19 @@ const breadcrumbs = computed(() => {
       margin: 0 0.5rem;
       color: $border-color;
   }
+}
+
+.header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+    padding: 0 1rem;
+}
+
+@media (max-width: 768px) {
+    .header-center {
+        justify-content: flex-start; /* Align left on mobile */
+    }
 }
 </style>

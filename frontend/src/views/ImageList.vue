@@ -1,16 +1,16 @@
 <template>
   <div class="view-container">
-    <div class="header">
-      <h1>Images ({{ rname }})</h1>
-      <span :title="!configStore.enableDeleteRepository ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper">
-          <button
-              @click="openDeleteRepoModal"
-              class="btn danger-outline"
-              :disabled="!configStore.enableDeleteRepository"
-          >
-              Delete Repository
-          </button>
-      </span>
+    <div class="view-controls">
+        <!-- Moved Delete Repo button here or keep standalone if needed -->
+        <span :title="!configStore.enableDeleteRepository ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper">
+            <button
+                @click="openDeleteRepoModal"
+                class="btn danger-outline"
+                :disabled="!configStore.enableDeleteRepository"
+            >
+                Delete Repository
+            </button>
+        </span>
     </div>
 
     <div v-if="store.imagesLoading" class="list-container skeleton-container">
@@ -384,21 +384,11 @@ const copyToClipboard = (text: string, id: string) => {
 @use '@/assets/main.scss' as *;
 
 .view-container {
-  .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-      flex-wrap: wrap;
-      gap: 1rem;
-
-      h1 {
-        margin: 0;
-        color: $primary-color;
-        font-size: 1.5rem;
-        word-break: break-word;
-      }
-  }
+    .view-controls {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 1rem;
+    }
 }
 
 .btn {
