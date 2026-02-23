@@ -13,7 +13,7 @@
       </span>
     </div>
 
-    <div v-if="store.imagesLoading" class="loading">Loading images...</div>
+    <div v-if="store.imagesLoading && store.images.length === 0" class="loading">Loading images...</div>
 
     <!-- Toast Notifications -->
     <ToastNotification
@@ -29,7 +29,7 @@
       @close="store.clearNotifications"
     />
 
-    <div v-if="!store.imagesLoading" class="list-container">
+    <div v-if="!store.imagesLoading || store.images.length > 0" class="list-container">
       <div class="list-controls" v-if="store.images.length > 0">
          <div class="select-all">
             <input type="checkbox" id="selectAll" :checked="allSelected" @change="toggleSelectAll" />
@@ -51,14 +51,19 @@
          </span>
       </div>
 
-      <div v-if="filteredImages.length === 0" class="empty-state">No images found.</div>
-      <div v-for="image in filteredImages" :key="image.digest" class="list-item" :class="{ 'protected-item': isProtected(image) }">
+      <div v-if="filteredImages.length === 0 && !store.imagesLoading" class="empty-state">No images found.</div>
+      <div
+        v-for="image in filteredImages"
+        :key="image.digest"
+        class="list-item"
+        :class="{ 'protected-item': isProtected(image), 'deleting-item': store.deletionLoading.has(image.digest) }"
+      >
         <div class="checkbox-container">
            <input
              type="checkbox"
              :value="image.digest"
              :checked="selectedImages.has(image.digest)"
-             :disabled="isProtected(image)"
+             :disabled="isProtected(image) || store.deletionLoading.has(image.digest)"
              @change="toggleSelection(image.digest)"
            />
         </div>
@@ -103,6 +108,7 @@
         </div>
         <span class="tooltip-wrapper" :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : (isProtected(image) ? 'Protected Image' : 'Delete Image')">
             <button
+                v-if="!store.deletionLoading.has(image.digest)"
                 @click="openDeleteImageModal(image)"
                 class="delete-btn"
                 :disabled="!configStore.enableDeleteImage || isProtected(image)"
@@ -112,6 +118,7 @@
                     <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
                 </svg>
             </button>
+            <div v-else class="spinner-small" title="Deleting..."></div>
         </span>
       </div>
     </div>
@@ -750,5 +757,25 @@ const copyToClipboard = (text: string, id: string) => {
     align-items: center;
     margin-right: 0.25rem;
     cursor: help;
+}
+
+.deleting-item {
+    opacity: 0.5;
+    pointer-events: none;
+    background-color: rgba($muted-bg, 0.3);
+}
+
+.spinner-small {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba($danger-color, 0.3);
+    border-radius: 50%;
+    border-top-color: $danger-color;
+    animation: spin 1s ease-in-out infinite;
+    margin: 0.5rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 </style>
