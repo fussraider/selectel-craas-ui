@@ -256,7 +256,9 @@ const filteredImages = computed(() => {
 })
 
 const allSelected = computed(() => {
-    return filteredImages.value.length > 0 && selectedImages.value.size === filteredImages.value.length
+    if (filteredImages.value.length === 0) return false
+    const selectable = filteredImages.value.filter(img => !isProtected(img))
+    return selectable.length > 0 && selectable.every(img => selectedImages.value.has(img.digest))
 })
 
 const fetchData = async () => {
