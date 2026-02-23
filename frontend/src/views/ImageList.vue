@@ -110,11 +110,11 @@
   <ConfirmModal
     v-if="modalState.isOpen"
     :is-open="modalState.isOpen"
-    :title="modalState.title"
-    :message="modalState.message"
+    :title="modalTitle"
+    :message="modalMessage"
     :is-danger="true"
-    :confirm-text="modalState.type === 'repo' ? 'Delete Repository' : 'Delete'"
-    :verification-value="modalState.verificationValue"
+    :confirm-text="modalConfirmText"
+    :verification-value="modalVerificationValue"
     @update:is-open="modalState.isOpen = $event"
     @confirm="handleModalConfirm"
     @cancel="closeModal"
@@ -156,10 +156,37 @@ const copiedState = ref<Record<string, boolean>>({})
 const modalState = reactive({
   isOpen: false,
   type: 'single' as 'single' | 'bulk' | 'repo',
-  title: '',
-  message: '',
-  targetDigest: '',
-  verificationValue: undefined as string | undefined
+  targetDigest: ''
+})
+
+const modalTitle = computed(() => {
+    switch (modalState.type) {
+        case 'single': return 'Delete Image'
+        case 'bulk': return 'Confirm Bulk Deletion'
+        case 'repo': return 'Delete Repository'
+        default: return 'Confirm Action'
+    }
+})
+
+const modalMessage = computed(() => {
+    switch (modalState.type) {
+        case 'single':
+            return `Are you sure you want to delete image ${modalState.targetDigest}? This cannot be undone.`
+        case 'bulk':
+            return `Are you sure you want to delete ${selectedImages.value.size} selected images?`
+        case 'repo':
+            return `Are you sure you want to delete repository '${rname.value}'? All images within it will be permanently lost.`
+        default:
+            return 'Are you sure you want to proceed?'
+    }
+})
+
+const modalConfirmText = computed(() => {
+    return modalState.type === 'repo' ? 'Delete Repository' : 'Delete'
+})
+
+const modalVerificationValue = computed(() => {
+    return modalState.type === 'repo' ? rname.value : undefined
 })
 
 const filteredImages = computed(() => {
@@ -220,25 +247,16 @@ const toggleSelectAll = () => {
 const openDeleteImageModal = (digest: string) => {
     modalState.type = 'single'
     modalState.targetDigest = digest
-    modalState.title = 'Delete Image'
-    modalState.message = `Are you sure you want to delete image ${digest}? This cannot be undone.`
-    modalState.verificationValue = undefined
     modalState.isOpen = true
 }
 
 const openBulkDeleteModal = () => {
     modalState.type = 'bulk'
-    modalState.title = 'Confirm Bulk Deletion'
-    modalState.message = `Are you sure you want to delete ${selectedImages.value.size} selected images?`
-    modalState.verificationValue = undefined
     modalState.isOpen = true
 }
 
 const openDeleteRepoModal = () => {
     modalState.type = 'repo'
-    modalState.title = 'Delete Repository'
-    modalState.message = `Are you sure you want to delete repository '${rname.value}'? All images within it will be permanently lost.`
-    modalState.verificationValue = rname.value
     modalState.isOpen = true
 }
 
