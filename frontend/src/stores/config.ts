@@ -6,12 +6,14 @@ interface Config {
   enableDeleteRegistry: boolean
   enableDeleteRepository: boolean
   enableDeleteImage: boolean
+  protectedTags?: string[]
 }
 
 export const useConfigStore = defineStore('config', () => {
   const enableDeleteRegistry = ref(false)
   const enableDeleteRepository = ref(false)
   const enableDeleteImage = ref(false)
+  const protectedTags = ref<string[]>([])
 
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -23,6 +25,7 @@ export const useConfigStore = defineStore('config', () => {
       enableDeleteRegistry.value = res.data.enableDeleteRegistry
       enableDeleteRepository.value = res.data.enableDeleteRepository
       enableDeleteImage.value = res.data.enableDeleteImage
+      protectedTags.value = res.data.protectedTags || []
     } catch (err) {
       console.error("Failed to load config", err)
       error.value = formatError(err)
@@ -35,6 +38,7 @@ export const useConfigStore = defineStore('config', () => {
     enableDeleteRegistry,
     enableDeleteRepository,
     enableDeleteImage,
+    protectedTags,
     fetchConfig,
     loading,
     error

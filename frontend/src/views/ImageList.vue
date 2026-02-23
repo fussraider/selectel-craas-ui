@@ -52,12 +52,23 @@
       </div>
 
       <div v-if="filteredImages.length === 0" class="empty-state">No images found.</div>
-      <div v-for="image in filteredImages" :key="image.digest" class="list-item">
+      <div v-for="image in filteredImages" :key="image.digest" class="list-item" :class="{ 'protected-item': isProtected(image) }">
         <div class="checkbox-container">
-           <input type="checkbox" :value="image.digest" :checked="selectedImages.has(image.digest)" @change="toggleSelection(image.digest)" />
+           <input
+             type="checkbox"
+             :value="image.digest"
+             :checked="selectedImages.has(image.digest)"
+             :disabled="isProtected(image)"
+             @change="toggleSelection(image.digest)"
+           />
         </div>
         <div class="item-info">
           <div class="digest-row">
+            <span v-if="isProtected(image)" class="protected-icon" title="This image is protected and cannot be deleted">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-shield-lock-fill" viewBox="0 0 16 16">
+                  <path fill-rule="evenodd" d="M8 0c-.69 0-1.843.265-2.928.56-1.11.3-2.229.655-2.887.87a1.54 1.54 0 0 0-1.044 1.262c-.596 4.477.787 7.795 2.465 9.99a11.777 11.777 0 0 0 2.517 2.453c.386.273.744.482 1.048.625.28.132.581.24.829.24s.548-.108.829-.24a7.159 7.159 0 0 0 1.048-.625 11.775 11.775 0 0 0 2.517-2.453c1.678-2.195 3.061-5.513 2.465-9.99a1.541 1.541 0 0 0-1.044-1.263 62.467 62.467 0 0 0-2.887-.87C9.843.266 8.69 0 8 0zm0 5a1.5 1.5 0 0 1 .5 2.915l.385 1.99a.5.5 0 0 1-.491.595h-.788a.5.5 0 0 1-.49-.595l.384-1.99A1.5 1.5 0 0 1 8 5z"/>
+                </svg>
+            </span>
             <span class="digest" :title="image.digest">{{ image.digest }}</span>
             <button class="copy-btn" @click="copyToClipboard(image.digest, image.digest)" title="Copy Digest">
                 <span v-if="copiedState[image.digest]" class="success-icon">
@@ -90,11 +101,11 @@
             <span>Created: {{ new Date(image.createdAt).toLocaleString() }}</span>
           </div>
         </div>
-        <span class="tooltip-wrapper" :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : 'Delete Image'">
+        <span class="tooltip-wrapper" :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : (isProtected(image) ? 'Protected Image' : 'Delete Image')">
             <button
                 @click="openDeleteImageModal(image)"
                 class="delete-btn"
-                :disabled="!configStore.enableDeleteImage"
+                :disabled="!configStore.enableDeleteImage || isProtected(image)"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
                     <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
@@ -163,6 +174,11 @@ const configStore = useConfigStore()
 const pid = computed(() => route.params.pid as string)
 const rid = computed(() => route.params.rid as string)
 const rname = computed(() => route.params.rname as string)
+
+const isProtected = (image: Image): boolean => {
+    if (!configStore.protectedTags || configStore.protectedTags.length === 0) return false
+    return !!(image.tags && image.tags.some(tag => configStore.protectedTags && configStore.protectedTags.includes(tag)))
+}
 
 const selectedImages = ref(new Set<string>())
 const deleteWithGC = ref(true)
@@ -257,7 +273,11 @@ const toggleSelectAll = () => {
     if (allSelected.value) {
         selectedImages.value.clear()
     } else {
-        filteredImages.value.forEach(img => selectedImages.value.add(img.digest))
+        filteredImages.value.forEach(img => {
+            if (!isProtected(img)) {
+                selectedImages.value.add(img.digest)
+            }
+        })
     }
 }
 
@@ -717,5 +737,18 @@ const copyToClipboard = (text: string, id: string) => {
     cursor: help;
     font-size: 0.85rem;
     color: $text-color;
+}
+
+.protected-item {
+    background-color: rgba($primary-color, 0.05);
+    border-color: rgba($primary-color, 0.2);
+}
+
+.protected-icon {
+    color: $primary-color;
+    display: flex;
+    align-items: center;
+    margin-right: 0.25rem;
+    cursor: help;
 }
 </style>

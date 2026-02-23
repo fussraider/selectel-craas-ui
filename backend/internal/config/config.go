@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -21,6 +22,8 @@ type Config struct {
 	EnableDeleteRegistry   bool
 	EnableDeleteRepository bool
 	EnableDeleteImage      bool
+
+	ProtectedTags []string
 }
 
 func Load() (*Config, error) {
@@ -41,12 +44,28 @@ func Load() (*Config, error) {
 		EnableDeleteRegistry:   getEnvBool("ENABLE_DELETE_REGISTRY", false),
 		EnableDeleteRepository: getEnvBool("ENABLE_DELETE_REPOSITORY", false),
 		EnableDeleteImage:      getEnvBool("ENABLE_DELETE_IMAGE", false),
+
+		ProtectedTags: getEnvSlice("PROTECTED_TAGS", nil),
 	}, nil
 }
 
 func getEnv(key, fallback string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
+	}
+	return fallback
+}
+
+func getEnvSlice(key string, fallback []string) []string {
+	if value, exists := os.LookupEnv(key); exists {
+		parts := strings.Split(value, ",")
+		var trimmed []string
+		for _, p := range parts {
+			if t := strings.TrimSpace(p); t != "" {
+				trimmed = append(trimmed, t)
+			}
+		}
+		return trimmed
 	}
 	return fallback
 }
