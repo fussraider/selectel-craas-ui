@@ -26,6 +26,7 @@
             <span v-if="index < breadcrumbs.length - 1" class="separator">/</span>
           </span>
         </div>
+        <div id="header-actions"></div>
       </div>
 
       <div class="header-right">
@@ -89,34 +90,19 @@ watch(() => route.fullPath, () => {
     }
 })
 
-const shorten = (str: string) => {
-    if (!str) return ''
-    return str.length > 8 ? str.substring(0, 8) + '...' : str
-}
-
 const breadcrumbs = computed(() => {
   const crumbs = []
-  // Base crumb?
-  // crumbs.push({ label: 'Home', to: '/' })
 
   const pid = route.params.pid as string
   const rid = route.params.rid as string
   const rname = route.params.rname as string
 
-  // With the new layout, Project and Repo selection are "primary" nav.
-  // Breadcrumbs might be useful for context.
-
-  if (pid) {
-      // We don't really have a "Project Dashboard" yet, but link to root?
-      // crumbs.push({ label: `Project ${pid}`, to: `/` })
-  }
-
   if (rid) {
-      crumbs.push({ label: `Registry ${shorten(rid)}`, to: `/projects/${pid}/registries/${rid}` })
+      crumbs.push({ label: `Registry ${rid}`, to: `/projects/${pid}/registries/${rid}` })
   }
 
   if (rname) {
-      crumbs.push({ label: `Repo ${shorten(rname)}`, to: `/projects/${pid}/registries/${rid}/repositories/${encodeURIComponent(rname)}` })
+      crumbs.push({ label: `Repo ${rname}`, to: `/projects/${pid}/registries/${rid}/repositories/${encodeURIComponent(rname)}` })
   }
 
   return crumbs
@@ -237,9 +223,7 @@ const breadcrumbs = computed(() => {
   color: $secondary-color;
   display: flex;
   align-items: center;
-  overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
 
   a {
       color: $primary-color;
@@ -259,14 +243,21 @@ const breadcrumbs = computed(() => {
 .header-center {
     flex: 1;
     display: flex;
-    justify-content: center;
+    align-items: center;
+    justify-content: flex-start;
     overflow: hidden;
     padding: 0 1rem;
+    gap: 1rem;
+}
+
+#header-actions {
+    display: flex;
+    align-items: center;
 }
 
 @media (max-width: 768px) {
-    .header-center {
-        justify-content: flex-start; /* Align left on mobile */
+    .breadcrumbs {
+        display: none;
     }
 }
 </style>

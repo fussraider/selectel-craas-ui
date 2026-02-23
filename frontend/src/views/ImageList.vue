@@ -1,17 +1,17 @@
 <template>
   <div class="view-container">
-    <div class="view-controls">
-        <!-- Moved Delete Repo button here or keep standalone if needed -->
-        <span :title="!configStore.enableDeleteRepository ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper">
+    <!-- Teleport Delete Repo button to header -->
+    <Teleport to="#header-actions">
+        <span :title="!configStore.enableDeleteRepository ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper header-action-btn">
             <button
                 @click="openDeleteRepoModal"
-                class="btn danger-outline"
+                class="btn danger-outline small-btn"
                 :disabled="!configStore.enableDeleteRepository"
             >
-                Delete Repository
+                Delete Repo
             </button>
         </span>
-    </div>
+    </Teleport>
 
     <div v-if="store.imagesLoading" class="list-container skeleton-container">
         <div v-for="n in 5" :key="n" class="list-item skeleton-item-row">
@@ -44,24 +44,26 @@
 
     <div v-if="!store.imagesLoading || store.images.length > 0" class="list-container">
       <div class="list-controls" v-if="store.images.length > 0">
-         <div class="select-all">
-            <input type="checkbox" id="selectAll" :checked="allSelected" @change="toggleSelectAll" />
-            <label for="selectAll">Select All</label>
-         </div>
-
          <div class="search-box">
              <input type="text" v-model="searchQuery" placeholder="Search by tag..." class="search-input" />
          </div>
 
-         <span :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper" :class="{ 'hidden-wrapper': selectedImages.size === 0 }">
-             <button
-                 @click="openBulkDeleteModal"
-                 class="bulk-delete-btn"
-                 :disabled="selectedImages.size === 0 || !configStore.enableDeleteImage"
-             >
-                Delete Selected ({{ selectedImages.size }})
-             </button>
-         </span>
+         <div class="controls-actions">
+             <div class="select-all">
+                <input type="checkbox" id="selectAll" :checked="allSelected" @change="toggleSelectAll" />
+                <label for="selectAll">Select All</label>
+             </div>
+
+             <span :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper" :class="{ 'hidden-wrapper': selectedImages.size === 0 }">
+                 <button
+                     @click="openBulkDeleteModal"
+                     class="bulk-delete-btn"
+                     :disabled="selectedImages.size === 0 || !configStore.enableDeleteImage"
+                 >
+                    Delete Selected ({{ selectedImages.size }})
+                 </button>
+             </span>
+         </div>
       </div>
 
       <div v-if="filteredImages.length === 0 && !store.imagesLoading" class="empty-state">No images found.</div>
@@ -384,11 +386,7 @@ const copyToClipboard = (text: string, id: string) => {
 @use '@/assets/main.scss' as *;
 
 .view-container {
-    .view-controls {
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: 1rem;
-    }
+    /* Main container tweaks if needed */
 }
 
 .btn {
@@ -414,6 +412,15 @@ const copyToClipboard = (text: string, id: string) => {
             color: rgba($danger-color, 0.5);
         }
     }
+
+    &.small-btn {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.85rem;
+    }
+}
+
+.header-action-btn {
+    margin-left: auto;
 }
 
 .list-container {
@@ -596,31 +603,24 @@ const copyToClipboard = (text: string, id: string) => {
 
 .list-controls {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 1rem;
+    flex-direction: column;
+    padding: 0.5rem;
     background: $control-bg;
     border: 1px solid $border-color;
     border-radius: 6px;
     margin-bottom: 0.5rem;
-    min-height: 48px;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.select-all {
-    display: flex;
     gap: 0.5rem;
-    align-items: center;
-    font-weight: bold;
-    white-space: nowrap;
+
+    @media (min-width: 768px) {
+        flex-direction: row;
+        align-items: center;
+        padding: 0.5rem 1rem;
+    }
 }
 
 .search-box {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    max-width: 400px;
+    width: 100%;
+    order: 1;
 
     .search-input {
         width: 100%;
@@ -635,6 +635,35 @@ const copyToClipboard = (text: string, id: string) => {
             border-color: transparent;
         }
     }
+
+    @media (min-width: 768px) {
+        flex: 1;
+        max-width: 400px;
+        order: 0;
+    }
+}
+
+.controls-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    order: 2;
+    gap: 1rem;
+
+    @media (min-width: 768px) {
+        width: auto;
+        justify-content: flex-end;
+        order: 0;
+    }
+}
+
+.select-all {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-weight: bold;
+    white-space: nowrap;
 }
 
 .checkbox-container {
