@@ -231,9 +231,13 @@ const modalVerificationValue = computed(() => {
 })
 
 const filteredImages = computed(() => {
-    if (!searchQuery.value) return store.images
+    const images = store.images.slice().sort((a, b) => {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+
+    if (!searchQuery.value) return images
     const query = searchQuery.value.toLowerCase()
-    return store.images.filter(img =>
+    return images.filter(img =>
         img.tags && img.tags.some(tag => tag.toLowerCase().includes(query))
     )
 })
