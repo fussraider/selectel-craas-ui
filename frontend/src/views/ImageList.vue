@@ -44,26 +44,24 @@
 
     <div v-if="!store.imagesLoading || store.images.length > 0" class="list-container">
       <div class="list-controls" v-if="store.images.length > 0">
+         <div class="select-all">
+            <input type="checkbox" id="selectAll" :checked="allSelected" @change="toggleSelectAll" />
+            <label for="selectAll">Select All</label>
+         </div>
+
          <div class="search-box">
              <input type="text" v-model="searchQuery" placeholder="Search by tag..." class="search-input" />
          </div>
 
-         <div class="controls-actions">
-             <div class="select-all">
-                <input type="checkbox" id="selectAll" :checked="allSelected" @change="toggleSelectAll" />
-                <label for="selectAll">Select All</label>
-             </div>
-
-             <span :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper" :class="{ 'hidden-wrapper': selectedImages.size === 0 }">
-                 <button
-                     @click="openBulkDeleteModal"
-                     class="bulk-delete-btn"
-                     :disabled="selectedImages.size === 0 || !configStore.enableDeleteImage"
-                 >
-                    Delete Selected ({{ selectedImages.size }})
-                 </button>
-             </span>
-         </div>
+         <span :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper bulk-delete-wrapper" :class="{ 'hidden-wrapper': selectedImages.size === 0 }">
+             <button
+                 @click="openBulkDeleteModal"
+                 class="bulk-delete-btn"
+                 :disabled="selectedImages.size === 0 || !configStore.enableDeleteImage"
+             >
+                Delete Selected ({{ selectedImages.size }})
+             </button>
+         </span>
       </div>
 
       <div v-if="filteredImages.length === 0 && !store.imagesLoading" class="empty-state">No images found.</div>
@@ -603,7 +601,8 @@ const copyToClipboard = (text: string, id: string) => {
 
 .list-controls {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    align-items: center;
     padding: 0.5rem;
     background: $control-bg;
     border: 1px solid $border-color;
@@ -612,8 +611,7 @@ const copyToClipboard = (text: string, id: string) => {
     gap: 0.5rem;
 
     @media (min-width: 768px) {
-        flex-direction: row;
-        align-items: center;
+        flex-wrap: nowrap;
         padding: 0.5rem 1rem;
     }
 }
@@ -638,23 +636,8 @@ const copyToClipboard = (text: string, id: string) => {
 
     @media (min-width: 768px) {
         flex: 1;
-        max-width: 400px;
-        order: 0;
-    }
-}
-
-.controls-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    order: 2;
-    gap: 1rem;
-
-    @media (min-width: 768px) {
-        width: auto;
-        justify-content: flex-end;
-        order: 0;
+        order: 2;
+        margin: 0 1rem;
     }
 }
 
@@ -664,6 +647,20 @@ const copyToClipboard = (text: string, id: string) => {
     align-items: center;
     font-weight: bold;
     white-space: nowrap;
+    order: 2;
+
+    @media (min-width: 768px) {
+        order: 1;
+    }
+}
+
+.bulk-delete-wrapper {
+    order: 3;
+    margin-left: auto;
+
+    @media (min-width: 768px) {
+        margin-left: 0;
+    }
 }
 
 .checkbox-container {

@@ -244,7 +244,7 @@ const breadcrumbs = computed(() => {
     flex: 1;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
     overflow: hidden;
     padding: 0 1rem;
     gap: 1rem;
@@ -253,6 +253,7 @@ const breadcrumbs = computed(() => {
 #header-actions {
     display: flex;
     align-items: center;
+    margin-left: auto;
 }
 
 @media (max-width: 768px) {
