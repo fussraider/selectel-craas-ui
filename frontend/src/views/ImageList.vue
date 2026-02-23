@@ -386,10 +386,14 @@ const copyToClipboard = (text: string, id: string) => {
       justify-content: space-between;
       align-items: center;
       margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
 
       h1 {
         margin: 0;
         color: $primary-color;
+        font-size: 1.5rem;
+        word-break: break-word;
       }
   }
 }
@@ -461,8 +465,20 @@ const copyToClipboard = (text: string, id: string) => {
     font-family: monospace;
     font-weight: bold;
     color: $text-color;
-    word-break: break-all;
     font-size: 0.9rem;
+
+    display: inline-block;
+    max-width: 15ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+@media (min-width: 768px) {
+    .digest {
+        max-width: 40ch;
+    }
 }
 
 .copy-btn {

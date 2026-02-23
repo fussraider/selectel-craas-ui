@@ -12,7 +12,7 @@
         <div class="logo">
           <router-link to="/">
             <img src="/logo.png" alt="CRaaS Logo" class="logo-img" />
-            <span>CRaaS Console</span>
+            <span class="logo-text">CRaaS Console</span>
           </router-link>
         </div>
       </div>
@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ProjectSelector from './ProjectSelector.vue'
 import RepositorySidebar from './RepositorySidebar.vue'
@@ -64,6 +64,18 @@ const closeSidebarIfMobile = () => {
     if (window.innerWidth < 768) {
         sidebarOpen.value = false
     }
+}
+
+// Close sidebar on route change (mobile)
+watch(() => route.fullPath, () => {
+    if (window.innerWidth < 768) {
+        sidebarOpen.value = false
+    }
+})
+
+const shorten = (str: string) => {
+    if (!str) return ''
+    return str.length > 8 ? str.substring(0, 8) + '...' : str
 }
 
 const breadcrumbs = computed(() => {
@@ -84,11 +96,11 @@ const breadcrumbs = computed(() => {
   }
 
   if (rid) {
-      crumbs.push({ label: `Registry ${rid}`, to: `/projects/${pid}/registries/${rid}` })
+      crumbs.push({ label: `Registry ${shorten(rid)}`, to: `/projects/${pid}/registries/${rid}` })
   }
 
   if (rname) {
-      crumbs.push({ label: `Repo ${rname}`, to: `/projects/${pid}/registries/${rid}/repositories/${encodeURIComponent(rname)}` })
+      crumbs.push({ label: `Repo ${shorten(rname)}`, to: `/projects/${pid}/registries/${rid}/repositories/${encodeURIComponent(rname)}` })
   }
 
   return crumbs
@@ -136,6 +148,19 @@ const breadcrumbs = computed(() => {
   .logo-img {
     height: 50px;
     width: auto;
+    transition: height 0.2s;
+  }
+
+  @media (max-width: 768px) {
+      padding: 0 0.5rem;
+
+      .logo-text {
+          display: none;
+      }
+
+      .logo-img {
+          height: 32px;
+      }
   }
 }
 

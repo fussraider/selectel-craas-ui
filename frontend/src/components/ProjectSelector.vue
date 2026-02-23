@@ -1,6 +1,6 @@
 <template>
   <div class="project-selector">
-    <label for="project-select">Project:</label>
+    <label for="project-select" class="selector-label">Project:</label>
     <select
       id="project-select"
       v-model="selectedProject"
@@ -98,6 +98,18 @@ const onProjectChange = async () => {
       &:focus {
           outline: 2px solid $primary-color;
           border-color: transparent;
+      }
+  }
+
+  @media (max-width: 768px) {
+      .selector-label {
+          display: none;
+      }
+
+      select {
+          min-width: 120px;
+          max-width: 150px;
+          font-size: 0.85rem;
       }
   }
 }
