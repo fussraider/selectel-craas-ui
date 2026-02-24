@@ -1,0 +1,41 @@
+services:
+  backend:
+    #image: ghcr.io/fussraider/selectel-craas-ui-backend:latest
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - WEB_PORT=8080
+      - LOG_LEVEL=info
+      # Selectel Cloud Credentials
+      - SELECTEL_USERNAME=${SELECTEL_USERNAME}
+      - SELECTEL_ACCOUNT_ID=${SELECTEL_ACCOUNT_ID}
+      - SELECTEL_PASSWORD=${SELECTEL_PASSWORD}
+      - SELECTEL_PROJECT_NAME=${SELECTEL_PROJECT_NAME}
+      # Feature Flags
+      - ENABLE_DELETE_REGISTRY=true
+      - ENABLE_DELETE_REPOSITORY=true
+      - ENABLE_DELETE_IMAGE=true
+      # Protected tags (comma separated)
+      - PROTECTED_TAGS=latest,stable
+
+  frontend:
+    #image: ghcr.io/fussraider/selectel-craas-ui-frontend:latest
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      # configuration for the API address.
+      # This URL must be accessible from the user's browser.
+      #
+      # option 1: Separate Domains (e.g. backend at api.example.com)
+      # - API_BASE_URL=https://api.example.com
+      #
+      # option 2: Local Development (backend exposed on localhost:8080)
+      - API_BASE_URL=http://localhost:8080/api
+    depends_on:
+      - backend
