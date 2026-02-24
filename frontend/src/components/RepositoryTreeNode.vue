@@ -69,7 +69,7 @@ const toggle = inject('toggle') as (path: string) => void
 const isExpanded = (path: string) => expandedKeys.has(path)
 
 const paddingLeft = computed(() => {
-  return 1 + props.depth * 1.5
+  return 2 + props.depth * 1.5
 })
 </script>
 
