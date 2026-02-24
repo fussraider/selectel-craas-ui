@@ -104,6 +104,34 @@ make run-backend
 make run-frontend
 ```
 
+## Docker Deployment
+
+This repository includes a `docker-compose.example.yml` file to demonstrate how to deploy the application using Docker
+Compose.
+
+### Frontend Configuration
+
+The frontend image supports runtime configuration for the backend API URL. This allows you to build the image once and
+deploy it to different environments without rebuilding.
+
+Set the `API_BASE_URL` environment variable for the frontend container to point to your backend API.
+
+**Note:** The `API_BASE_URL` must be accessible from the user's browser (e.g., `https://api.example.com` or `http://localhost:8080` for local development). Do not use internal Docker network aliases (like `http://backend:8080`) as the frontend runs in the client's browser.
+
+### Example Usage
+
+1. Copy the example file:
+   ```bash
+   cp docker-compose.example.yml docker-compose.yml
+   ```
+
+2. Edit `docker-compose.yml` to set your Selectel credentials and preferred configuration.
+
+3. Run the stack:
+   ```bash
+   docker-compose up -d
+   ```
+
 ## Project Structure
 
 - `backend/`: Go backend source code.
