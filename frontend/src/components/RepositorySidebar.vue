@@ -46,24 +46,12 @@
                 No repositories
             </div>
 
-            <router-link
+            <RepositoryTree
                 v-else
-                v-for="repo in registry.repositories"
-                :key="repo.name"
-                :to="`/projects/${store.selectedProjectId}/registries/${registry.id}/repositories/${encodeURIComponent(repo.name)}`"
-                class="repo-link"
-                active-class="active"
-            >
-                <div class="repo-content">
-                    <div class="repo-name">
-                        <span class="repo-icon">📄</span>
-                        {{ repo.name }}
-                    </div>
-                    <div class="repo-meta">
-                        <span v-if="repo.size !== undefined">{{ formatSize(repo.size) }}</span>
-                    </div>
-                </div>
-            </router-link>
+                :repositories="registry.repositories"
+                :registry-id="registry.id"
+                :project-id="store.selectedProjectId"
+            />
         </div>
       </div>
 
@@ -90,6 +78,7 @@ import { useRegistryStore } from '@/stores/registry'
 import { useConfigStore } from '@/stores/config'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import RepositoryTree from './RepositoryTree.vue'
 
 const store = useRegistryStore()
 const configStore = useConfigStore()
@@ -103,14 +92,6 @@ const refresh = async () => {
 const logout = () => {
     authStore.logout()
     router.push('/login')
-}
-
-const formatSize = (bytes: number) => {
-    if (bytes === 0) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
 }
 </script>
 
@@ -223,53 +204,7 @@ const formatSize = (bytes: number) => {
     padding-left: 0.5rem;
 }
 
-.repo-link {
-    display: block; // Change to block for content container
-    padding: 0.5rem 1rem 0.5rem 2rem; // Indent
-    text-decoration: none;
-    border-left: 2px solid transparent;
-    transition: all 0.2s;
-    color: $secondary-color;
-
-    &:hover {
-        background-color: rgba($primary-color, 0.05);
-        color: $text-color;
-    }
-
-    &.active {
-        background-color: rgba($primary-color, 0.1);
-        color: $primary-color;
-        border-left-color: $primary-color;
-
-        .repo-name {
-            font-weight: 500;
-        }
-    }
-}
-
-.repo-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-}
-
-.repo-name {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.repo-meta {
-    font-size: 0.75rem;
-    color: color.adjust($secondary-color, $lightness: -20%);
-    margin-left: 1.4rem; // Align with text start (icon width + gap)
-    display: flex;
-    gap: 0.5rem;
-    opacity: 0.8;
-}
-
-.registry-icon, .repo-icon {
+.registry-icon {
     opacity: 0.7;
 }
 
