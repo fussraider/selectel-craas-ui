@@ -163,7 +163,7 @@ const handleSubmit = async () => {
 
 .error-alert {
   background-color: rgba($danger-color, 0.1);
-  color: lighten($danger-color, 10%);
+  color: color.adjust($danger-color, $lightness: 10%);
   padding: 0.75rem;
   border-radius: 4px;
   margin-bottom: 1.5rem;
@@ -198,7 +198,7 @@ const handleSubmit = async () => {
   }
 
   &:disabled {
-    background-color: desaturate($primary-color, 20%);
+    background-color: color.adjust($primary-color, $saturation: -20%);
     opacity: 0.7;
     cursor: wait;
   }
