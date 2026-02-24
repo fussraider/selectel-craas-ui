@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"log"
 	"net/http"
@@ -34,13 +32,7 @@ func main() {
 			log.Fatal("Authentication is ENABLED but AUTH_LOGIN or AUTH_PASSWORD is not set. Please set these environment variables.")
 		}
 		if cfg.JWTSecret == "" {
-			appLogger.Warn("JWT_SECRET is not set. Generating a random secret. Sessions will be invalidated on restart.")
-			// Generate random secret
-			bytes := make([]byte, 32)
-			if _, err := rand.Read(bytes); err != nil {
-				log.Fatalf("Failed to generate random JWT secret: %v", err)
-			}
-			cfg.JWTSecret = base64.StdEncoding.EncodeToString(bytes)
+			log.Fatal("Authentication is ENABLED but JWT_SECRET is not set. Please set this environment variable for session security.")
 		}
 		appLogger.Info("Authentication: ENABLED")
 	} else {
