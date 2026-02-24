@@ -58,9 +58,10 @@ tooltip explaining the restriction.
 
 ### Logging
 
-| Variable | Description | Defa ult || :- -- | :--- | :--- |
-| `LOG_L:--------------| Logging level ( `debug`, `inf o`, `warn`, `error`) | `INFO` |
-| `LOG_FORMAT` | Log format (`t ext`, `json`) | `TEXT` |
+| Variable     | Description                                       | Default |
+|:-------------|:--------------------------------------------------|:--------|
+| `LOG_LEVEL`  | Logging level ( `debug`, `info`, `warn`, `error`) | `INFO`  |
+| `LOG_FORMAT` | Log format (`text`, `json`)                       | `TEXT`  |
 
 ## Running the Application
 
