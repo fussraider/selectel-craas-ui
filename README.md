@@ -23,6 +23,7 @@ A modern, full-stack web interface for managing Selectel Container Registry (CRa
 - **Backend**: Go 1.24+ (Chi router, Selectel SDK, Slog logging).
 - **Frontend**: Vue 3, TypeScript, Pinia (Setup Stores), Vite.
 - **Testing**: Playwright for frontend verification.
+- **Linting**: Oxlint and ESLint for frontend code quality.
 
 ## Prerequisites
 
@@ -118,6 +119,12 @@ You can use the `Makefile` in the root directory:
 
 ```bash
 make all
+```
+
+To run lint checks:
+
+```bash
+make lint-frontend
 ```
 
 To run the built artifacts:

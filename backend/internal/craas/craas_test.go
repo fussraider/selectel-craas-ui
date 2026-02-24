@@ -77,6 +77,29 @@ func TestListImages(t *testing.T) {
 	assert.Equal(t, digest, images[0].Digest)
 }
 
+func TestListImages_EncodedRepoName(t *testing.T) {
+	digest := "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Strictly check for encoded slash
+		if strings.Contains(r.RequestURI, "group%2Frepo") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`[{"digest": "` + digest + `"}]`))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer ts.Close()
+
+	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
+	// We pass "group/repo" as the name. It should be encoded by the client.
+	images, err := svc.ListImages(context.Background(), "fake-token", "reg1", "group/repo")
+
+	assert.NoError(t, err)
+	assert.Len(t, images, 1)
+	assert.Equal(t, digest, images[0].Digest)
+}
+
 func TestListImages_MissingTags(t *testing.T) {
 	// 64-char hashes
 	hAbc := "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
@@ -182,7 +205,8 @@ func TestDeleteRegistry(t *testing.T) {
 
 func TestCleanupRepository(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/v1/registries/reg1/repositories/repo1/cleanup" && r.Method == "POST" {
+		// Expect encoded path
+		if strings.Contains(r.RequestURI, "group%2Frepo/cleanup") {
 			var req CleanupRequest
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				w.WriteHeader(http.StatusBadRequest)
@@ -206,7 +230,7 @@ func TestCleanupRepository(t *testing.T) {
 	defer ts.Close()
 
 	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
-	result, err := svc.CleanupRepository(context.Background(), "fake-token", "reg1", "repo1", []string{"sha256:abc"}, false)
+	result, err := svc.CleanupRepository(context.Background(), "fake-token", "reg1", "group/repo", []string{"sha256:abc"}, false)
 
 	assert.NoError(t, err)
 	assert.Len(t, result.Deleted, 1)
