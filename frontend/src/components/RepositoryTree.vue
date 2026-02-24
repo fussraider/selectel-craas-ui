@@ -12,7 +12,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, provide, reactive } from 'vue'
+import { computed, provide, reactive, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import type { Repository } from '@/types'
 import type { RepoNode } from '@/types/tree'
 import RepositoryTreeNode from './RepositoryTreeNode.vue'
@@ -23,6 +24,7 @@ const props = defineProps<{
   registryId: string
 }>()
 
+const route = useRoute()
 const expandedKeys = reactive(new Set<string>())
 
 // Toggle function provided to children
@@ -111,5 +113,36 @@ const treeNodes = computed(() => {
   sortNodes(nodes)
 
   return nodes
+})
+
+// Auto-expand logic based on current route
+const expandActivePath = () => {
+    // The route parameter is named 'rname' in router/index.ts
+    const repoName = route.params.rname
+
+    if (typeof repoName === 'string') {
+        const decodedName = decodeURIComponent(repoName)
+        const parts = decodedName.split('/')
+
+        let currentPath = ''
+        // Iterate up to the second to last part (parents)
+        for (let i = 0; i < parts.length - 1; i++) {
+            const part = parts[i]
+            currentPath = currentPath ? `${currentPath}/${part}` : part
+            expandedKeys.add(currentPath)
+        }
+    }
+}
+
+watch(
+    () => route.params.rname,
+    () => {
+        expandActivePath()
+    },
+    { immediate: true }
+)
+
+onMounted(() => {
+    expandActivePath()
 })
 </script>
