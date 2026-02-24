@@ -12,6 +12,7 @@ func (s *Server) GetConfig(w http.ResponseWriter, r *http.Request) {
 		"enableDeleteRepository": s.Config.EnableDeleteRepository,
 		"enableDeleteImage":      s.Config.EnableDeleteImage,
 		"protectedTags":          s.Config.ProtectedTags,
+		"authEnabled":            s.Config.AuthEnabled,
 	}
 	RespondJSON(w, http.StatusOK, cfg)
 }

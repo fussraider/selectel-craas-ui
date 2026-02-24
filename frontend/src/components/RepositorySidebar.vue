@@ -71,16 +71,38 @@
           No registries found.
       </div>
     </div>
+
+    <div v-if="configStore.authEnabled" class="sidebar-footer">
+        <button @click="logout" class="logout-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Sign Out
+        </button>
+    </div>
   </aside>
 </template>
 
 <script setup lang="ts">
 import { useRegistryStore } from '@/stores/registry'
+import { useConfigStore } from '@/stores/config'
+import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
 
 const store = useRegistryStore()
+const configStore = useConfigStore()
+const authStore = useAuthStore()
+const router = useRouter()
 
 const refresh = async () => {
     await store.refreshStructure()
+}
+
+const logout = () => {
+    authStore.logout()
+    router.push('/login')
 }
 
 const formatSize = (bytes: number) => {
@@ -315,5 +337,38 @@ const formatSize = (bytes: number) => {
     border-top-color: $primary-color;
     animation: spin 1s ease-in-out infinite;
     margin-left: 0.5rem;
+}
+
+.sidebar-footer {
+    padding: 1rem;
+    border-top: 1px solid $border-color;
+    margin-top: auto;
+}
+
+.logout-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background-color: transparent;
+    border: 1px solid $border-color;
+    color: $text-color;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+
+    &:hover {
+        background-color: rgba($danger-color, 0.1);
+        color: $danger-color;
+        border-color: rgba($danger-color, 0.3);
+    }
+
+    svg {
+        width: 18px;
+        height: 18px;
+    }
 }
 </style>

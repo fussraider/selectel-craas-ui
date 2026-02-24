@@ -26,6 +26,19 @@ func main() {
 	appLogger := logger.New(cfg.LogLevel, cfg.LogFormat)
 	appLogger.Info("starting application", "port", cfg.WebPort, "log_level", cfg.LogLevel)
 
+	// Auth validation
+	if cfg.AuthEnabled {
+		if cfg.AuthLogin == "" || cfg.AuthPassword == "" {
+			log.Fatal("Authentication is ENABLED but AUTH_LOGIN or AUTH_PASSWORD is not set. Please set these environment variables.")
+		}
+		if cfg.JWTSecret == "" {
+			log.Fatal("Authentication is ENABLED but JWT_SECRET is not set. Please set this environment variable for session security.")
+		}
+		appLogger.Info("Authentication: ENABLED")
+	} else {
+		appLogger.Warn("Authentication: DISABLED (Anyone can access the application)")
+	}
+
 	authClient := auth.New(cfg, appLogger)
 	craasService := craas.New(appLogger)
 
