@@ -89,7 +89,7 @@
                     </svg>
                 </span>
                 <span class="digest" :title="image.digest">{{ image.digest }}</span>
-                <button class="copy-btn" @click="copyToClipboard(image.digest, image.digest)" title="Copy Digest">
+                <button class="copy-btn" @click="copyToClipboard(`cr.selcloud.ru/${registryName}/${rname}@${image.digest}`, image.digest)" title="Copy Digest">
                     <span v-if="copiedState[image.digest]" class="success-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-lg" viewBox="0 0 16 16">
                             <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"/>
@@ -123,7 +123,7 @@
                 :key="tag"
                 class="tag"
                 :class="{ 'copied': copiedState[image.digest + tag] }"
-                @click="copyToClipboard(tag, image.digest + tag)"
+                @click="copyToClipboard(`cr.selcloud.ru/${registryName}/${rname}:${tag}`, image.digest + tag)"
                 title="Click to copy tag"
             >
                 {{ tag }}
@@ -209,6 +209,8 @@ const configStore = useConfigStore()
 const pid = computed(() => route.params.pid as string)
 const rid = computed(() => route.params.rid as string)
 const rname = computed(() => route.params.rname as string)
+const registry = computed(() => store.registries.find(r => r.id === rid.value))
+const registryName = computed(() => registry.value?.name || '')
 
 const isProtected = (image: Image): boolean => {
     if (!configStore.protectedTags || configStore.protectedTags.length === 0) return false
