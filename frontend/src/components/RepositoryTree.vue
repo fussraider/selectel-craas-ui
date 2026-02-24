@@ -127,7 +127,8 @@ const expandActivePath = () => {
         let currentPath = ''
         // Iterate up to the second to last part (parents)
         for (let i = 0; i < parts.length - 1; i++) {
-            const part = parts[i]
+            const part = parts[i] ?? ''
+            if (!part) continue
             currentPath = currentPath ? `${currentPath}/${part}` : part
             expandedKeys.add(currentPath)
         }
