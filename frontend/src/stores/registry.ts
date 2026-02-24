@@ -174,21 +174,6 @@ export const useRegistryStore = defineStore('registry', () => {
       }
   }
 
-  const deleteImage = async (pid: string, rid: string, rname: string, digest: string) => {
-      deletionLoading.value.add(digest)
-      clearNotifications()
-      try {
-          await client.delete(`/projects/${pid}/registries/${rid}/images/${digest}`, { params: { repository: rname } })
-          images.value = images.value.filter(i => i.digest !== digest)
-          success.value = "Image deleted successfully"
-      } catch (err) {
-          handleError(err)
-          throw err
-      } finally {
-          deletionLoading.value.delete(digest)
-      }
-  }
-
   const cleanupRepository = async (pid: string, rid: string, rname: string, digests: string[], disableGC: boolean = false) => {
       digests.forEach(d => deletionLoading.value.add(d))
       clearNotifications()
@@ -255,7 +240,6 @@ export const useRegistryStore = defineStore('registry', () => {
       fetchRepositories,
       deleteRepository,
       fetchImages,
-      deleteImage,
       cleanupRepository,
       fetchGCInfo,
       startGC,

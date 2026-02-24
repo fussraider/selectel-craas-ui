@@ -79,6 +79,9 @@ func (s *Service) GetGCInfo(ctx context.Context, token, registryID string) (*GCI
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusUnauthorized {
+			return nil, ErrUnauthorized
+		}
 		body, _ := io.ReadAll(resp.Body)
 		s.logger.Error("get gc info failed", "status", resp.StatusCode, "body", string(body))
 		return nil, fmt.Errorf("request failed with status: %d", resp.StatusCode)
@@ -121,6 +124,9 @@ func (s *Service) StartGC(ctx context.Context, token, registryID string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
+		if resp.StatusCode == http.StatusUnauthorized {
+			return ErrUnauthorized
+		}
 		if resp.StatusCode == http.StatusConflict {
 			return fmt.Errorf("garbage collection already in progress")
 		}

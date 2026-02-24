@@ -2,9 +2,12 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/generic/selectel-craas-web/internal/craas"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
@@ -68,15 +71,20 @@ func (s *Server) ExecuteWithRetry(ctx context.Context, pid string, op func(token
 		return nil
 	}
 
-	// 3. If operation failed, it might be due to an expired token (even if we just got it from cache)
-	// OR the error is unrelated to auth. We assume it might be auth related and retry once.
-	// (This matches the original logic: "failed to list registries, retrying")
-	s.Logger.Warn("operation failed, retrying with token invalidation", "project_id", pid, "error", err)
-	s.Auth.InvalidateProjectToken(pid)
-	token, err = s.Auth.GetProjectToken(pid)
-	if err != nil {
-		return err // Failed to get fresh token
+	// 3. Check if the error is auth-related (401 Unauthorized)
+	// We only retry if we suspect the token is invalid/expired.
+	isAuthError := errors.Is(err, craas.ErrUnauthorized) || strings.Contains(err.Error(), "401") || strings.Contains(err.Error(), "Unauthorized")
+
+	if isAuthError {
+		s.Logger.Warn("auth error detected, retrying with token invalidation", "project_id", pid, "error", err)
+		s.Auth.InvalidateProjectToken(pid)
+		token, err = s.Auth.GetProjectToken(pid)
+		if err != nil {
+			return err // Failed to get fresh token
+		}
+		return op(token)
 	}
 
-	return op(token)
+	// For other errors, return immediately without retry
+	return err
 }

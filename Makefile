@@ -21,3 +21,6 @@ test-backend:
 
 test-frontend:
 	@echo "No frontend tests"
+
+lint-frontend:
+	cd frontend && npm run lint

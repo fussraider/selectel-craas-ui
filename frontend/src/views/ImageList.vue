@@ -209,10 +209,11 @@
 import { useRegistryStore } from '@/stores/registry'
 import { useConfigStore } from '@/stores/config'
 import type { Image } from '@/types'
-import { onMounted, onUnmounted, computed, ref, watch, reactive, useTemplateRef } from 'vue'
+import { onMounted, onUnmounted, computed, ref, watch, useTemplateRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ToastNotification from '@/components/ToastNotification.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import { useConfirmModal } from '@/composables/useConfirmModal'
 
 const router = useRouter()
 const route = useRoute()
@@ -230,6 +231,7 @@ const isProtected = (image: Image): boolean => {
 }
 
 const selectedImages = ref(new Set<string>())
+const selectedImagesCount = computed(() => selectedImages.value.size)
 const deleteWithGC = ref(true)
 const searchQuery = ref("")
 const copiedState = ref<Record<string, boolean>>({})
@@ -237,43 +239,17 @@ const isControlsVisible = ref(true)
 const controlsRef = useTemplateRef('controlsRef')
 let observer: IntersectionObserver | null = null
 
-// Modal State Management
-const modalState = reactive({
-  isOpen: false,
-  type: 'single' as 'single' | 'bulk' | 'repo',
-  targetDigest: '',
-  targetTags: [] as string[]
-})
-
-const modalTitle = computed(() => {
-    switch (modalState.type) {
-        case 'single': return 'Delete Image'
-        case 'bulk': return 'Confirm Bulk Deletion'
-        case 'repo': return 'Delete Repository'
-        default: return 'Confirm Action'
-    }
-})
-
-const modalMessage = computed(() => {
-    switch (modalState.type) {
-        case 'single':
-            return 'Are you sure you want to delete this image? This cannot be undone.'
-        case 'bulk':
-            return `Are you sure you want to delete ${selectedImages.value.size} selected images?`
-        case 'repo':
-            return `Are you sure you want to delete repository '${rname.value}'? All images within it will be permanently lost.`
-        default:
-            return 'Are you sure you want to proceed?'
-    }
-})
-
-const modalConfirmText = computed(() => {
-    return modalState.type === 'repo' ? 'Delete Repository' : 'Delete'
-})
-
-const modalVerificationValue = computed(() => {
-    return modalState.type === 'repo' ? rname.value : undefined
-})
+const {
+  modalState,
+  modalTitle,
+  modalMessage,
+  modalConfirmText,
+  modalVerificationValue,
+  openDeleteImageModal,
+  openBulkDeleteModal,
+  openDeleteRepoModal,
+  closeModal
+} = useConfirmModal(rname, selectedImagesCount)
 
 const filteredImages = computed(() => {
     const images = store.images.slice().sort((a, b) => {
@@ -357,30 +333,6 @@ const toggleSelectAll = () => {
             }
         })
     }
-}
-
-// Modal Actions
-const openDeleteImageModal = (image: Image) => {
-    modalState.type = 'single'
-    modalState.targetDigest = image.digest
-    modalState.targetTags = image.tags || []
-    modalState.isOpen = true
-}
-
-const openBulkDeleteModal = () => {
-    modalState.type = 'bulk'
-    modalState.isOpen = true
-}
-
-const openDeleteRepoModal = () => {
-    modalState.type = 'repo'
-    modalState.isOpen = true
-}
-
-const closeModal = () => {
-    modalState.isOpen = false
-    modalState.targetDigest = ''
-    modalState.targetTags = []
 }
 
 const handleModalConfirm = async () => {
