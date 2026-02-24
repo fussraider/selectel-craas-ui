@@ -86,3 +86,42 @@ func TestEnableCORS(t *testing.T) {
 		})
 	}
 }
+
+func TestSecurityHeaders(t *testing.T) {
+	server := &Server{}
+
+	// Create a dummy handler that the middleware will wrap
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Create the middleware
+	handler := server.SecurityHeaders(nextHandler)
+
+	// Create a request
+	req := httptest.NewRequest("GET", "/test", nil)
+	rr := httptest.NewRecorder()
+
+	// Serve the request
+	handler.ServeHTTP(rr, req)
+
+	// Check status code
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check headers
+	headers := map[string]string{
+		"X-Content-Type-Options":  "nosniff",
+		"X-Frame-Options":         "DENY",
+		"Content-Security-Policy": "default-src 'self'",
+		"Referrer-Policy":         "strict-origin-when-cross-origin",
+	}
+
+	for k, v := range headers {
+		if val := rr.Header().Get(k); val != v {
+			t.Errorf("header %s: got %s want %s", k, val, v)
+		}
+	}
+}

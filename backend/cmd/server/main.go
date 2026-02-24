@@ -39,6 +39,10 @@ func main() {
 		appLogger.Warn("Authentication: DISABLED (Anyone can access the application)")
 	}
 
+	if cfg.CORSAllowedOrigin == "*" {
+		appLogger.Warn("CORS: ALLOWED_ORIGIN is set to '*' (INSECURE). Do not use this in production.")
+	}
+
 	authClient := auth.New(cfg, appLogger)
 	craasService := craas.New(appLogger)
 
