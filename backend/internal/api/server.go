@@ -27,6 +27,7 @@ func New(auth *auth.Client, craas *craas.Service, logger *slog.Logger, cfg *conf
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
+	r.Use(s.SecurityHeaders)
 	r.Use(s.EnableCORS)
 	r.Use(s.RequestLogger)
 
