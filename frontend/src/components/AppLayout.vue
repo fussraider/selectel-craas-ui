@@ -152,7 +152,7 @@ const breadcrumbs = computed(() => {
   }
 
   .logo-img {
-    height: 50px;
+    height: 36px;
     width: auto;
     transition: height 0.2s;
   }

@@ -89,7 +89,7 @@ const handleSubmit = async () => {
   background-color: $card-bg;
   border: 1px solid $border-color;
   border-radius: 8px;
-  padding: 2.5rem;
+  padding: 1.5rem 2.5rem 2.5rem 2.5rem;
   width: 100%;
   max-width: 400px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -108,7 +108,7 @@ const handleSubmit = async () => {
   margin-bottom: 2rem;
 
   .login-logo {
-    height: 60px;
+    height: 120px;
     width: auto;
     margin-bottom: 1rem;
   }
