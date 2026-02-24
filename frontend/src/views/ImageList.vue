@@ -69,9 +69,10 @@
              <button
                  @click="openBulkDeleteModal"
                  class="bulk-delete-btn"
-                 :disabled="selectedImages.size === 0 || !configStore.enableDeleteImage"
+                 :disabled="selectedImages.size === 0 || !configStore.enableDeleteImage || isProcessingBulk"
              >
-                Delete Selected ({{ selectedImages.size }})
+                <span v-if="isProcessingBulk">Deleting...</span>
+                <span v-else>Delete Selected ({{ selectedImages.size }})</span>
              </button>
          </span>
       </div>
@@ -157,9 +158,10 @@
           <button
                  @click="openBulkDeleteModal"
                  class="bulk-delete-btn shadow-btn"
-                 :disabled="!configStore.enableDeleteImage"
+                 :disabled="!configStore.enableDeleteImage || isProcessingBulk"
              >
-                Delete Selected ({{ selectedImages.size }})
+                <span v-if="isProcessingBulk">Deleting...</span>
+                <span v-else>Delete Selected ({{ selectedImages.size }})</span>
           </button>
       </div>
   </Transition>
@@ -267,6 +269,17 @@ const allSelected = computed(() => {
     if (filteredImages.value.length === 0) return false
     const selectable = filteredImages.value.filter(img => !isProtected(img))
     return selectable.length > 0 && selectable.every(img => selectedImages.value.has(img.digest))
+})
+
+const isProcessingBulk = computed(() => {
+    // If any of the selected images are currently in the deletion loading set,
+    // we consider the bulk action to be processing.
+    for (const digest of selectedImages.value) {
+        if (store.deletionLoading.has(digest)) {
+            return true
+        }
+    }
+    return false
 })
 
 const fetchData = async () => {
