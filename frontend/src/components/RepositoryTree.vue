@@ -37,6 +37,23 @@ const toggle = (path: string) => {
 provide('expandedKeys', expandedKeys)
 provide('toggle', toggle)
 
+const sortNodes = (nodes: RepoNode[]) => {
+    // Sort groups first, then by name
+    nodes.sort((a, b) => {
+        if (a.isGroup === b.isGroup) {
+            return a.name.localeCompare(b.name)
+        }
+        return a.isGroup ? -1 : 1
+    })
+
+    // Recursively sort children
+    nodes.forEach(node => {
+        if (node.children.length > 0) {
+            sortNodes(node.children)
+        }
+    })
+}
+
 const treeNodes = computed(() => {
   const nodes: RepoNode[] = []
   const map = new Map<string, RepoNode>()
@@ -89,6 +106,9 @@ const treeNodes = computed(() => {
         }
     })
   })
+
+  // Apply sorting: Groups first, then alphanumeric
+  sortNodes(nodes)
 
   return nodes
 })

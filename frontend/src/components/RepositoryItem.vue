@@ -7,7 +7,11 @@
   >
     <div class="repo-content">
       <div class="repo-name">
-        <span class="repo-icon">📄</span>
+        <span class="repo-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+          </svg>
+        </span>
         {{ displayName || repo.name }}
       </div>
       <div class="repo-meta">
@@ -49,7 +53,7 @@ const formatSize = (bytes: number) => {
 
 .repo-link {
   display: block;
-  padding: 0.5rem 1rem 0.5rem 2rem;
+  padding: 0.5rem 1rem 0.5rem 0; // Left padding handled by style prop
   text-decoration: none;
   border-left: 2px solid transparent;
   transition: all 0.2s;
@@ -88,7 +92,7 @@ const formatSize = (bytes: number) => {
 .repo-meta {
   font-size: 0.75rem;
   color: color.adjust($secondary-color, $lightness: -20%);
-  margin-left: 1.4rem;
+  margin-left: 1.4rem; // Approx 20px icon + gap
   display: flex;
   gap: 0.5rem;
   opacity: 0.8;
@@ -96,5 +100,9 @@ const formatSize = (bytes: number) => {
 
 .repo-icon {
   opacity: 0.7;
+  display: flex;
+  justify-content: center;
+  width: 20px;
+  flex-shrink: 0;
 }
 </style>

@@ -80,12 +80,13 @@ const paddingLeft = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 1rem 0.5rem 1rem;
+  padding: 0.5rem 1rem 0.5rem 0; // Left padding handled by style prop
   cursor: pointer;
   color: $secondary-color;
   transition: all 0.2s;
   user-select: none;
   font-size: 0.95rem;
+  border-left: 2px solid transparent; // Match repo-link
 
   &:hover {
     color: $text-color;
@@ -103,7 +104,10 @@ const paddingLeft = computed(() => {
 .folder-icon {
   opacity: 0.7;
   display: flex;
+  justify-content: center;
   color: $primary-color;
+  width: 20px;
+  flex-shrink: 0;
 }
 
 .chevron {
