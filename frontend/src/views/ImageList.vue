@@ -43,7 +43,7 @@
     />
 
     <div v-if="!store.imagesLoading || store.images.length > 0" class="list-container">
-      <div class="list-controls" v-if="store.images.length > 0">
+      <div class="list-controls" v-if="store.images.length > 0" ref="controlsRef">
          <div class="select-all">
             <input type="checkbox" id="selectAll" :checked="allSelected" @change="toggleSelectAll" />
             <label for="selectAll">Select All</label>
@@ -140,6 +140,18 @@
     </div>
   </div>
 
+  <Transition name="slide-up">
+      <div v-if="selectedImages.size > 0 && !isControlsVisible" class="sticky-actions">
+          <button
+                 @click="openBulkDeleteModal"
+                 class="bulk-delete-btn shadow-btn"
+                 :disabled="!configStore.enableDeleteImage"
+             >
+                Delete Selected ({{ selectedImages.size }})
+          </button>
+      </div>
+  </Transition>
+
   <!-- Reusable Confirmation Modal -->
   <ConfirmModal
     v-if="modalState.isOpen"
@@ -185,7 +197,7 @@
 import { useRegistryStore } from '@/stores/registry'
 import { useConfigStore } from '@/stores/config'
 import type { Image } from '@/types'
-import { onMounted, computed, ref, watch, reactive } from 'vue'
+import { onMounted, onUnmounted, computed, ref, watch, reactive, useTemplateRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ToastNotification from '@/components/ToastNotification.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
@@ -207,6 +219,9 @@ const selectedImages = ref(new Set<string>())
 const deleteWithGC = ref(true)
 const searchQuery = ref("")
 const copiedState = ref<Record<string, boolean>>({})
+const isControlsVisible = ref(true)
+const controlsRef = useTemplateRef('controlsRef')
+let observer: IntersectionObserver | null = null
 
 // Modal State Management
 const modalState = reactive({
@@ -272,6 +287,26 @@ const fetchData = async () => {
 
 onMounted(() => {
   fetchData()
+
+  if (window.IntersectionObserver) {
+      observer = new IntersectionObserver((entries) => {
+          if (entries[0]) {
+              isControlsVisible.value = entries[0].isIntersecting
+          }
+      }, { threshold: 0 })
+
+      // Watch for ref availability
+      watch(controlsRef, (el) => {
+          if (el && observer) {
+              observer.disconnect()
+              observer.observe(el)
+          }
+      }, { immediate: true })
+  }
+})
+
+onUnmounted(() => {
+    if (observer) observer.disconnect()
 })
 
 watch(() => route.fullPath, () => {
@@ -909,4 +944,30 @@ const copyToClipboard = (text: string, id: string) => {
 .width-40 { width: 40%; }
 .width-30 { width: 30%; }
 .width-20 { width: 20%; }
+
+.sticky-actions {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    padding: 0.5rem;
+
+    .shadow-btn {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        padding: 0.8rem 1.5rem;
+        font-weight: bold;
+    }
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translate(-50%, 200%); // Start/End below screen
+  opacity: 0;
+}
 </style>
