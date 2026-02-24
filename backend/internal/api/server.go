@@ -27,7 +27,7 @@ func New(auth *auth.Client, craas *craas.Service, logger *slog.Logger, cfg *conf
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
-	r.Use(EnableCORS)
+	r.Use(s.EnableCORS)
 	r.Use(s.RequestLogger)
 
 	// Public routes

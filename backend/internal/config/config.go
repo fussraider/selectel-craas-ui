@@ -30,6 +30,9 @@ type Config struct {
 	AuthLogin    string
 	AuthPassword string
 	JWTSecret    string
+
+	// CORS
+	CORSAllowedOrigin string
 }
 
 func Load() (*Config, error) {
@@ -57,6 +60,8 @@ func Load() (*Config, error) {
 		AuthLogin:    getEnv("AUTH_LOGIN", ""),
 		AuthPassword: getEnv("AUTH_PASSWORD", ""),
 		JWTSecret:    getEnv("JWT_SECRET", ""),
+
+		CORSAllowedOrigin: getEnv("CORS_ALLOWED_ORIGIN", "*"),
 	}, nil
 }
 
