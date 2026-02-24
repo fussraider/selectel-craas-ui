@@ -57,6 +57,7 @@ To connect to the Selectel Container Registry, you need credentials for a user w
 | `SELECTEL_ACCOUNT_ID`   | Selectel Account ID              | (Required) |
 | `SELECTEL_PASSWORD`     | Selectel Password                | (Required) |
 | `SELECTEL_PROJECT_NAME` | Selectel Project Name (Required) | (Required) |
+| `CORS_ALLOWED_ORIGIN`   | Allowed Origin for CORS requests | `*`        |
 
 ### Web Interface Security
 
