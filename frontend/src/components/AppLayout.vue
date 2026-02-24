@@ -12,13 +12,21 @@
         <div class="logo">
           <router-link to="/">
             <img src="/logo.png" alt="CRaaS Logo" class="logo-img" />
-            <span>CRaaS Console</span>
+            <span class="logo-text">CRaaS Console</span>
           </router-link>
         </div>
       </div>
 
       <div class="header-center">
-        <ProjectSelector />
+        <!-- Breadcrumbs moved here -->
+        <div class="breadcrumbs" v-if="breadcrumbs.length > 0">
+           <span v-for="(crumb, index) in breadcrumbs" :key="index">
+            <router-link v-if="crumb.to" :to="crumb.to">{{ crumb.label }}</router-link>
+            <span v-else>{{ crumb.label }}</span>
+            <span v-if="index < breadcrumbs.length - 1" class="separator">/</span>
+          </span>
+        </div>
+        <div id="header-actions"></div>
       </div>
 
       <div class="header-right">
@@ -32,15 +40,6 @@
       </aside>
 
       <main class="app-content" @click="closeSidebarIfMobile">
-        <!-- Breadcrumbs can stay, but maybe simplified -->
-        <div class="breadcrumbs" v-if="breadcrumbs.length > 0">
-           <span v-for="(crumb, index) in breadcrumbs" :key="index">
-            <router-link v-if="crumb.to" :to="crumb.to">{{ crumb.label }}</router-link>
-            <span v-else>{{ crumb.label }}</span>
-            <span v-if="index < breadcrumbs.length - 1" class="separator">/</span>
-          </span>
-        </div>
-
         <slot />
       </main>
     </div>
@@ -48,12 +47,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import ProjectSelector from './ProjectSelector.vue'
 import RepositorySidebar from './RepositorySidebar.vue'
+import { useRegistryStore } from '@/stores/registry'
+import { onMounted } from 'vue'
 
+const store = useRegistryStore()
 const route = useRoute()
+
+onMounted(async () => {
+    // Ensure project is loaded since selector is removed
+    await store.fetchProjects()
+    // Logic to select project moved to store/here if needed, but store handles auto-select on fetchProjects
+    if (store.projects.length > 0 && !store.selectedProjectId) {
+        const firstProject = store.projects[0]
+        if (firstProject) {
+            store.selectedProjectId = firstProject.id
+            await store.loadProjectData(store.selectedProjectId)
+        }
+    } else if (store.selectedProjectId) {
+        // Refresh data if ID exists
+        await store.loadProjectData(store.selectedProjectId)
+    }
+})
 const sidebarOpen = ref(false)
 
 const toggleSidebar = () => {
@@ -66,22 +83,19 @@ const closeSidebarIfMobile = () => {
     }
 }
 
+// Close sidebar on route change (mobile)
+watch(() => route.fullPath, () => {
+    if (window.innerWidth < 768) {
+        sidebarOpen.value = false
+    }
+})
+
 const breadcrumbs = computed(() => {
   const crumbs = []
-  // Base crumb?
-  // crumbs.push({ label: 'Home', to: '/' })
 
   const pid = route.params.pid as string
   const rid = route.params.rid as string
   const rname = route.params.rname as string
-
-  // With the new layout, Project and Repo selection are "primary" nav.
-  // Breadcrumbs might be useful for context.
-
-  if (pid) {
-      // We don't really have a "Project Dashboard" yet, but link to root?
-      // crumbs.push({ label: `Project ${pid}`, to: `/` })
-  }
 
   if (rid) {
       crumbs.push({ label: `Registry ${rid}`, to: `/projects/${pid}/registries/${rid}` })
@@ -136,6 +150,19 @@ const breadcrumbs = computed(() => {
   .logo-img {
     height: 50px;
     width: auto;
+    transition: height 0.2s;
+  }
+
+  @media (max-width: 768px) {
+      padding: 0 0.5rem;
+
+      .logo-text {
+          display: none;
+      }
+
+      .logo-img {
+          height: 32px;
+      }
   }
 }
 
@@ -192,22 +219,49 @@ const breadcrumbs = computed(() => {
 }
 
 .breadcrumbs {
-  margin-bottom: 1.5rem;
   font-size: 0.9rem;
   color: $secondary-color;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
 
   a {
       color: $primary-color;
       text-decoration: none;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      transition: background-color 0.2s;
 
       &:hover {
-          text-decoration: underline;
+          background-color: rgba($primary-color, 0.1);
       }
   }
 
   .separator {
-      margin: 0 0.5rem;
+      margin: 0 0.2rem;
       color: $border-color;
   }
+}
+
+.header-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    overflow: hidden;
+    padding: 0 1rem;
+    gap: 1rem;
+}
+
+#header-actions {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+@media (max-width: 768px) {
+    .breadcrumbs {
+        display: none;
+    }
 }
 </style>

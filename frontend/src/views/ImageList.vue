@@ -1,17 +1,17 @@
 <template>
   <div class="view-container">
-    <div class="header">
-      <h1>Images ({{ rname }})</h1>
-      <span :title="!configStore.enableDeleteRepository ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper">
-          <button
-              @click="openDeleteRepoModal"
-              class="btn danger-outline"
-              :disabled="!configStore.enableDeleteRepository"
-          >
-              Delete Repository
-          </button>
-      </span>
-    </div>
+    <!-- Teleport Delete Repo button to header -->
+    <Teleport to="#header-actions">
+        <span :title="!configStore.enableDeleteRepository ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper header-action-btn">
+            <button
+                @click="openDeleteRepoModal"
+                class="btn danger-outline small-btn"
+                :disabled="!configStore.enableDeleteRepository"
+            >
+                Delete Repo
+            </button>
+        </span>
+    </Teleport>
 
     <div v-if="store.imagesLoading" class="list-container skeleton-container">
         <div v-for="n in 5" :key="n" class="list-item skeleton-item-row">
@@ -43,7 +43,7 @@
     />
 
     <div v-if="!store.imagesLoading || store.images.length > 0" class="list-container">
-      <div class="list-controls" v-if="store.images.length > 0">
+      <div class="list-controls" v-if="store.images.length > 0" ref="controlsRef">
          <div class="select-all">
             <input type="checkbox" id="selectAll" :checked="allSelected" @change="toggleSelectAll" />
             <label for="selectAll">Select All</label>
@@ -53,7 +53,7 @@
              <input type="text" v-model="searchQuery" placeholder="Search by tag..." class="search-input" />
          </div>
 
-         <span :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper" :class="{ 'hidden-wrapper': selectedImages.size === 0 }">
+         <span :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : ''" class="tooltip-wrapper bulk-delete-wrapper" :class="{ 'hidden-wrapper': selectedImages.size === 0 }">
              <button
                  @click="openBulkDeleteModal"
                  class="bulk-delete-btn"
@@ -82,23 +82,40 @@
         </div>
         <div class="item-info">
           <div class="digest-row">
-            <span v-if="isProtected(image)" class="protected-icon" title="This image is protected and cannot be deleted">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-shield-lock-fill" viewBox="0 0 16 16">
-                  <path fill-rule="evenodd" d="M8 0c-.69 0-1.843.265-2.928.56-1.11.3-2.229.655-2.887.87a1.54 1.54 0 0 0-1.044 1.262c-.596 4.477.787 7.795 2.465 9.99a11.777 11.777 0 0 0 2.517 2.453c.386.273.744.482 1.048.625.28.132.581.24.829.24s.548-.108.829-.24a7.159 7.159 0 0 0 1.048-.625 11.775 11.775 0 0 0 2.517-2.453c1.678-2.195 3.061-5.513 2.465-9.99a1.541 1.541 0 0 0-1.044-1.263 62.467 62.467 0 0 0-2.887-.87C9.843.266 8.69 0 8 0zm0 5a1.5 1.5 0 0 1 .5 2.915l.385 1.99a.5.5 0 0 1-.491.595h-.788a.5.5 0 0 1-.49-.595l.384-1.99A1.5 1.5 0 0 1 8 5z"/>
-                </svg>
-            </span>
-            <span class="digest" :title="image.digest">{{ image.digest }}</span>
-            <button class="copy-btn" @click="copyToClipboard(image.digest, image.digest)" title="Copy Digest">
-                <span v-if="copiedState[image.digest]" class="success-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-lg" viewBox="0 0 16 16">
-                        <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"/>
+            <div class="digest-left">
+                <span v-if="isProtected(image)" class="protected-icon" title="This image is protected and cannot be deleted">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-shield-lock-fill" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M8 0c-.69 0-1.843.265-2.928.56-1.11.3-2.229.655-2.887.87a1.54 1.54 0 0 0-1.044 1.262c-.596 4.477.787 7.795 2.465 9.99a11.777 11.777 0 0 0 2.517 2.453c.386.273.744.482 1.048.625.28.132.581.24.829.24s.548-.108.829-.24a7.159 7.159 0 0 0 1.048-.625 11.775 11.775 0 0 0 2.517-2.453c1.678-2.195 3.061-5.513 2.465-9.99a1.541 1.541 0 0 0-1.044-1.263 62.467 62.467 0 0 0-2.887-.87C9.843.266 8.69 0 8 0zm0 5a1.5 1.5 0 0 1 .5 2.915l.385 1.99a.5.5 0 0 1-.491.595h-.788a.5.5 0 0 1-.49-.595l.384-1.99A1.5 1.5 0 0 1 8 5z"/>
                     </svg>
                 </span>
-                <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
-                    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
-                    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
-                </svg>
-            </button>
+                <span class="digest" :title="image.digest">{{ image.digest }}</span>
+                <button class="copy-btn" @click="copyToClipboard(image.digest, image.digest)" title="Copy Digest">
+                    <span v-if="copiedState[image.digest]" class="success-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-lg" viewBox="0 0 16 16">
+                            <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"/>
+                        </svg>
+                    </span>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+                        <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+                        <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <span class="tooltip-wrapper" :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : (isProtected(image) ? 'Protected Image' : 'Delete Image')">
+                <button
+                    v-if="!store.deletionLoading.has(image.digest)"
+                    @click="openDeleteImageModal(image)"
+                    class="delete-btn"
+                    :disabled="!configStore.enableDeleteImage || isProtected(image)"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                        <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                    </svg>
+                </button>
+                <div v-else class="spinner-small" title="Deleting..."></div>
+            </span>
           </div>
           <div class="tags">
             <span
@@ -119,23 +136,21 @@
             <span>Created: {{ new Date(image.createdAt).toLocaleString() }}</span>
           </div>
         </div>
-        <span class="tooltip-wrapper" :title="!configStore.enableDeleteImage ? 'Disabled by environment configuration' : (isProtected(image) ? 'Protected Image' : 'Delete Image')">
-            <button
-                v-if="!store.deletionLoading.has(image.digest)"
-                @click="openDeleteImageModal(image)"
-                class="delete-btn"
-                :disabled="!configStore.enableDeleteImage || isProtected(image)"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
-                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-                </svg>
-            </button>
-            <div v-else class="spinner-small" title="Deleting..."></div>
-        </span>
       </div>
     </div>
   </div>
+
+  <Transition name="slide-up">
+      <div v-if="selectedImages.size > 0 && !isControlsVisible" class="sticky-actions">
+          <button
+                 @click="openBulkDeleteModal"
+                 class="bulk-delete-btn shadow-btn"
+                 :disabled="!configStore.enableDeleteImage"
+             >
+                Delete Selected ({{ selectedImages.size }})
+          </button>
+      </div>
+  </Transition>
 
   <!-- Reusable Confirmation Modal -->
   <ConfirmModal
@@ -182,7 +197,7 @@
 import { useRegistryStore } from '@/stores/registry'
 import { useConfigStore } from '@/stores/config'
 import type { Image } from '@/types'
-import { onMounted, computed, ref, watch, reactive } from 'vue'
+import { onMounted, onUnmounted, computed, ref, watch, reactive, useTemplateRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ToastNotification from '@/components/ToastNotification.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
@@ -204,6 +219,9 @@ const selectedImages = ref(new Set<string>())
 const deleteWithGC = ref(true)
 const searchQuery = ref("")
 const copiedState = ref<Record<string, boolean>>({})
+const isControlsVisible = ref(true)
+const controlsRef = useTemplateRef('controlsRef')
+let observer: IntersectionObserver | null = null
 
 // Modal State Management
 const modalState = reactive({
@@ -269,6 +287,26 @@ const fetchData = async () => {
 
 onMounted(() => {
   fetchData()
+
+  if (window.IntersectionObserver) {
+      observer = new IntersectionObserver((entries) => {
+          if (entries[0]) {
+              isControlsVisible.value = entries[0].isIntersecting
+          }
+      }, { threshold: 0 })
+
+      // Watch for ref availability
+      watch(controlsRef, (el) => {
+          if (el && observer) {
+              observer.disconnect()
+              observer.observe(el)
+          }
+      }, { immediate: true })
+  }
+})
+
+onUnmounted(() => {
+    if (observer) observer.disconnect()
 })
 
 watch(() => route.fullPath, () => {
@@ -381,17 +419,7 @@ const copyToClipboard = (text: string, id: string) => {
 @use '@/assets/main.scss' as *;
 
 .view-container {
-  .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-
-      h1 {
-        margin: 0;
-        color: $primary-color;
-      }
-  }
+    /* Main container tweaks if needed */
 }
 
 .btn {
@@ -417,6 +445,15 @@ const copyToClipboard = (text: string, id: string) => {
             color: rgba($danger-color, 0.5);
         }
     }
+
+    &.small-btn {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.85rem;
+    }
+}
+
+.header-action-btn {
+    margin-left: auto;
 }
 
 .list-container {
@@ -454,15 +491,43 @@ const copyToClipboard = (text: string, id: string) => {
 .digest-row {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.5rem;
+    width: 100%;
+}
+
+.digest-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1;
 }
 
 .digest {
     font-family: monospace;
     font-weight: bold;
     color: $text-color;
-    word-break: break-all;
     font-size: 0.9rem;
+
+    display: inline-block;
+    max-width: 15ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+@media (min-width: 768px) {
+    .digest {
+        max-width: 40ch;
+    }
+}
+
+@media (max-width: 768px) {
+    .list-item {
+        padding: 1rem;
+    }
 }
 
 .copy-btn {
@@ -536,6 +601,9 @@ const copyToClipboard = (text: string, id: string) => {
   color: $secondary-color;
   display: flex;
   gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .delete-btn {
@@ -568,31 +636,24 @@ const copyToClipboard = (text: string, id: string) => {
 
 .list-controls {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
     align-items: center;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem;
     background: $control-bg;
     border: 1px solid $border-color;
     border-radius: 6px;
     margin-bottom: 0.5rem;
-    min-height: 48px;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.select-all {
-    display: flex;
     gap: 0.5rem;
-    align-items: center;
-    font-weight: bold;
-    white-space: nowrap;
+
+    @media (min-width: 768px) {
+        flex-wrap: nowrap;
+        padding: 0.5rem 1rem;
+    }
 }
 
 .search-box {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    max-width: 400px;
+    width: 100%;
+    order: 1;
 
     .search-input {
         width: 100%;
@@ -606,6 +667,34 @@ const copyToClipboard = (text: string, id: string) => {
             outline: 2px solid $primary-color;
             border-color: transparent;
         }
+    }
+
+    @media (min-width: 768px) {
+        flex: 1;
+        order: 2;
+        margin: 0 1rem;
+    }
+}
+
+.select-all {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-weight: bold;
+    white-space: nowrap;
+    order: 2;
+
+    @media (min-width: 768px) {
+        order: 1;
+    }
+}
+
+.bulk-delete-wrapper {
+    order: 3;
+    margin-left: auto;
+
+    @media (min-width: 768px) {
+        margin-left: 0;
     }
 }
 
@@ -855,4 +944,30 @@ const copyToClipboard = (text: string, id: string) => {
 .width-40 { width: 40%; }
 .width-30 { width: 30%; }
 .width-20 { width: 20%; }
+
+.sticky-actions {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    padding: 0.5rem;
+
+    .shadow-btn {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        padding: 0.8rem 1.5rem;
+        font-weight: bold;
+    }
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translate(-50%, 200%); // Start/End below screen
+  opacity: 0;
+}
 </style>
