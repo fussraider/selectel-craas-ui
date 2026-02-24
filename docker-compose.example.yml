@@ -1,8 +1,9 @@
-version: '3.8'
-
 services:
   backend:
-    image: backend:latest # Replace with your actual backend image name
+    #image: ghcr.io/fussraider/selectel-craas-ui-backend:latest
+    build:
+      context: backend
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
     environment:
@@ -21,7 +22,10 @@ services:
       - PROTECTED_TAGS=latest,stable
 
   frontend:
-    image: frontend:latest # Replace with your actual frontend image name
+    #image: ghcr.io/fussraider/selectel-craas-ui-frontend:latest
+    build:
+      context: frontend
+      dockerfile: Dockerfile
     ports:
       - "80:80"
     environment:
@@ -32,6 +36,6 @@ services:
       # - API_BASE_URL=https://api.example.com
       #
       # option 2: Local Development (backend exposed on localhost:8080)
-      - API_BASE_URL=http://localhost:8080
+      - API_BASE_URL=http://localhost:8080/api
     depends_on:
       - backend
