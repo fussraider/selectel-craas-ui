@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -23,8 +24,11 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 		return nil, fmt.Errorf("failed to create client: %w", err)
 	}
 
+	// URL-encode repository name to handle special characters like slashes
+	encodedRepoName := url.PathEscape(repoName)
+
 	start := time.Now()
-	images, _, err := repository.ListImages(ctx, client, registryID, repoName)
+	images, _, err := repository.ListImages(ctx, client, registryID, encodedRepoName)
 	duration := time.Since(start)
 
 	if err != nil {
@@ -33,7 +37,7 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 	}
 
 	// Fetch all tags to check for missing ones
-	allTags, _, err := repository.ListTags(ctx, client, registryID, repoName)
+	allTags, _, err := repository.ListTags(ctx, client, registryID, encodedRepoName)
 	if err != nil {
 		s.logger.Warn("failed to list tags for verification", "registry_id", registryID, "repository", repoName, "error", err)
 		return images, nil
@@ -73,7 +77,8 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 			tag := tag
 			g.Go(func() error {
 				// Fetch all digests associated with the tag
-				digests, err := s.fetchImageDigests(ctx, httpClient, token, registryID, repoName, tag)
+				// Use encodedRepoName here too
+				digests, err := s.fetchImageDigests(ctx, httpClient, token, registryID, encodedRepoName, tag)
 				if err != nil {
 					s.logger.Warn("failed to fetch digests for tag", "tag", tag, "error", err)
 					return nil // Don't fail the whole group, just skip
@@ -206,8 +211,10 @@ func (s *Service) ListTags(ctx context.Context, token string, registryID, repoNa
 		return nil, fmt.Errorf("failed to create client: %w", err)
 	}
 
+	encodedRepoName := url.PathEscape(repoName)
+
 	start := time.Now()
-	tags, _, err := repository.ListTags(ctx, client, registryID, repoName)
+	tags, _, err := repository.ListTags(ctx, client, registryID, encodedRepoName)
 	duration := time.Since(start)
 
 	if err != nil {
@@ -226,8 +233,10 @@ func (s *Service) DeleteImage(ctx context.Context, token string, registryID, rep
 		return fmt.Errorf("failed to create client: %w", err)
 	}
 
+	encodedRepoName := url.PathEscape(repoName)
+
 	start := time.Now()
-	_, err = repository.DeleteImageManifest(ctx, client, registryID, repoName, digest)
+	_, err = repository.DeleteImageManifest(ctx, client, registryID, encodedRepoName, digest)
 	duration := time.Since(start)
 
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	clientv1 "github.com/selectel/craas-go/pkg/v1/client"
@@ -41,8 +42,10 @@ func (s *Service) DeleteRepository(ctx context.Context, token string, registryID
 		return fmt.Errorf("failed to create client: %w", err)
 	}
 
+	encodedRepoName := url.PathEscape(repoName)
+
 	start := time.Now()
-	_, err = repository.DeleteRepository(ctx, client, registryID, repoName)
+	_, err = repository.DeleteRepository(ctx, client, registryID, encodedRepoName)
 	duration := time.Since(start)
 
 	if err != nil {
@@ -57,7 +60,8 @@ func (s *Service) DeleteRepository(ctx context.Context, token string, registryID
 func (s *Service) CleanupRepository(ctx context.Context, token, registryID, repoName string, digests []string, disableGC bool) (*CleanupResult, error) {
 	s.logger.Info("cleaning up repository", "registry_id", registryID, "repository", repoName, "digest_count", len(digests), "disable_gc", disableGC)
 
-	url := fmt.Sprintf("%s/registries/%s/repositories/%s/cleanup", s.endpoint, registryID, repoName)
+	encodedRepoName := url.PathEscape(repoName)
+	cleanupUrl := fmt.Sprintf("%s/registries/%s/repositories/%s/cleanup", s.endpoint, registryID, encodedRepoName)
 
 	reqBody := CleanupRequest{
 		Digests:   digests,
@@ -69,7 +73,7 @@ func (s *Service) CleanupRepository(ctx context.Context, token, registryID, repo
 		return nil, fmt.Errorf("failed to marshal cleanup request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(bodyBytes))
+	req, err := http.NewRequestWithContext(ctx, "POST", cleanupUrl, bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cleanup request: %w", err)
 	}
