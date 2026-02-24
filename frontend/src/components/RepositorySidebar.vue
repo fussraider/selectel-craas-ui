@@ -61,7 +61,6 @@
                     </div>
                     <div class="repo-meta">
                         <span v-if="repo.size !== undefined">{{ formatSize(repo.size) }}</span>
-                        <span v-if="repo.updatedAt" class="meta-date">{{ formatDate(repo.updatedAt) }}</span>
                     </div>
                 </div>
             </router-link>
@@ -90,12 +89,6 @@ const formatSize = (bytes: number) => {
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
-}
-
-const formatDate = (dateStr: string) => {
-    if (!dateStr) return ''
-    const date = new Date(dateStr)
-    return date.toLocaleDateString() // Keep it short
 }
 </script>
 
