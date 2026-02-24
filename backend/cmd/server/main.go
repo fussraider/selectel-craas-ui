@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"log"
 	"net/http"
@@ -25,6 +27,25 @@ func main() {
 
 	appLogger := logger.New(cfg.LogLevel, cfg.LogFormat)
 	appLogger.Info("starting application", "port", cfg.WebPort, "log_level", cfg.LogLevel)
+
+	// Auth validation
+	if cfg.AuthEnabled {
+		if cfg.AuthLogin == "" || cfg.AuthPassword == "" {
+			log.Fatal("Authentication is ENABLED but AUTH_LOGIN or AUTH_PASSWORD is not set. Please set these environment variables.")
+		}
+		if cfg.JWTSecret == "" {
+			appLogger.Warn("JWT_SECRET is not set. Generating a random secret. Sessions will be invalidated on restart.")
+			// Generate random secret
+			bytes := make([]byte, 32)
+			if _, err := rand.Read(bytes); err != nil {
+				log.Fatalf("Failed to generate random JWT secret: %v", err)
+			}
+			cfg.JWTSecret = base64.StdEncoding.EncodeToString(bytes)
+		}
+		appLogger.Info("Authentication: ENABLED")
+	} else {
+		appLogger.Warn("Authentication: DISABLED (Anyone can access the application)")
+	}
 
 	authClient := auth.New(cfg, appLogger)
 	craasService := craas.New(appLogger)

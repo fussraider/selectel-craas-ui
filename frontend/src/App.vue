@@ -1,20 +1,14 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { RouterView } from 'vue-router'
+import { RouterView, useRoute } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
-import { useConfigStore } from '@/stores/config'
 
-const configStore = useConfigStore()
-
-onMounted(() => {
-    configStore.fetchConfig()
-})
+const route = useRoute()
 </script>
 
 <template>
-  <AppLayout>
+  <component :is="route.meta.hideLayout ? 'div' : AppLayout">
     <RouterView :key="$route.fullPath" />
-  </AppLayout>
+  </component>
 </template>
 
 <style lang="scss">

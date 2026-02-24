@@ -24,6 +24,12 @@ type Config struct {
 	EnableDeleteImage      bool
 
 	ProtectedTags []string
+
+	// Authentication
+	AuthEnabled  bool
+	AuthLogin    string
+	AuthPassword string
+	JWTSecret    string
 }
 
 func Load() (*Config, error) {
@@ -46,6 +52,11 @@ func Load() (*Config, error) {
 		EnableDeleteImage:      getEnvBool("ENABLE_DELETE_IMAGE", false),
 
 		ProtectedTags: getEnvSlice("PROTECTED_TAGS", nil),
+
+		AuthEnabled:  getEnvBool("AUTH_ENABLED", false),
+		AuthLogin:    getEnv("AUTH_LOGIN", ""),
+		AuthPassword: getEnv("AUTH_PASSWORD", ""),
+		JWTSecret:    getEnv("JWT_SECRET", ""),
 	}, nil
 }
 

@@ -30,28 +30,36 @@ func New(auth *auth.Client, craas *craas.Service, logger *slog.Logger, cfg *conf
 	r.Use(EnableCORS)
 	r.Use(s.RequestLogger)
 
-	// Config
+	// Public routes
 	r.Get("/api/config", s.GetConfig)
+	r.Post("/api/login", s.Login)
 
-	// Projects
-	r.Get("/api/auth/status", s.AuthStatus)
-	r.Get("/api/projects", s.ListProjects)
+	// Protected routes
+	r.Group(func(r chi.Router) {
+		r.Use(s.AuthMiddleware)
 
-	// Registries
-	r.Get("/api/projects/{pid}/registries", s.ListRegistries)
-	r.Delete("/api/projects/{pid}/registries/{rid}", s.DeleteRegistry)
-	r.Get("/api/projects/{pid}/registries/{rid}/gc", s.GetGCInfo)
-	r.Post("/api/projects/{pid}/registries/{rid}/gc", s.StartGC)
+		r.Get("/api/auth/check", s.AuthCheck)
 
-	// Repositories
-	r.Get("/api/projects/{pid}/registries/{rid}/repositories", s.ListRepositories)
-	r.Delete("/api/projects/{pid}/registries/{rid}/repository", s.DeleteRepository)
-	r.Post("/api/projects/{pid}/registries/{rid}/cleanup", s.CleanupRepository)
+		// Projects
+		r.Get("/api/auth/status", s.AuthStatus) // Checks upstream auth status
+		r.Get("/api/projects", s.ListProjects)
 
-	// Images
-	r.Get("/api/projects/{pid}/registries/{rid}/images", s.ListImages)
-	r.Delete("/api/projects/{pid}/registries/{rid}/images/{digest}", s.DeleteImage)
-	r.Get("/api/projects/{pid}/registries/{rid}/tags", s.ListTags)
+		// Registries
+		r.Get("/api/projects/{pid}/registries", s.ListRegistries)
+		r.Delete("/api/projects/{pid}/registries/{rid}", s.DeleteRegistry)
+		r.Get("/api/projects/{pid}/registries/{rid}/gc", s.GetGCInfo)
+		r.Post("/api/projects/{pid}/registries/{rid}/gc", s.StartGC)
+
+		// Repositories
+		r.Get("/api/projects/{pid}/registries/{rid}/repositories", s.ListRepositories)
+		r.Delete("/api/projects/{pid}/registries/{rid}/repository", s.DeleteRepository)
+		r.Post("/api/projects/{pid}/registries/{rid}/cleanup", s.CleanupRepository)
+
+		// Images
+		r.Get("/api/projects/{pid}/registries/{rid}/images", s.ListImages)
+		r.Delete("/api/projects/{pid}/registries/{rid}/images/{digest}", s.DeleteImage)
+		r.Get("/api/projects/{pid}/registries/{rid}/tags", s.ListTags)
+	})
 
 	return r
 }

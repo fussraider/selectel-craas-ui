@@ -2,10 +2,19 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import RegistrySettings from '../views/RegistrySettings.vue'
 import ImageList from '../views/ImageList.vue'
+import LoginView from '../views/LoginView.vue'
+import { useConfigStore } from '@/stores/config'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginView,
+      meta: { hideLayout: true }
+    },
     {
       path: '/',
       name: 'home',
@@ -21,7 +30,6 @@ const router = createRouter({
       name: 'images',
       component: ImageList,
     },
-    // Keep the old route as redirect or alias if needed, but for now we simplify
     {
       path: '/projects/:pid/registries/:rid/repositories/:rname/images',
       redirect: to => {
@@ -29,6 +37,23 @@ const router = createRouter({
       }
     }
   ],
+})
+
+router.beforeEach((to, from, next) => {
+  const configStore = useConfigStore()
+  const authStore = useAuthStore()
+
+  if (configStore.authEnabled) {
+    if (!authStore.isAuthenticated && to.name !== 'login') {
+      next({ name: 'login' })
+      return
+    }
+    if (authStore.isAuthenticated && to.name === 'login') {
+      next({ name: 'home' })
+      return
+    }
+  }
+  next()
 })
 
 export default router
