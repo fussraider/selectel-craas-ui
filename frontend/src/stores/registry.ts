@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import axios from 'axios'
 import client, { formatError } from '@/api/client'
 import type { Project, Registry, Repository, Image, GCInfo, CleanupResult } from '@/types'
 
@@ -142,17 +143,34 @@ export const useRegistryStore = defineStore('registry', () => {
       }
   }
 
+  let fetchImagesController: AbortController | null = null
+
   const fetchImages = async (pid: string, rid: string, rname: string) => {
+      if (fetchImagesController) {
+          fetchImagesController.abort()
+      }
+      fetchImagesController = new AbortController()
+      const signal = fetchImagesController.signal
+
       imagesLoading.value = true
       images.value = []
       clearNotifications()
       try {
-          const res = await client.get<Image[]>(`/projects/${pid}/registries/${rid}/images`, { params: { repository: rname } })
+          const res = await client.get<Image[]>(`/projects/${pid}/registries/${rid}/images`, {
+              params: { repository: rname },
+              signal
+          })
           images.value = res.data
       } catch (err) {
+          if (axios.isCancel(err)) {
+              return
+          }
           handleError(err)
       } finally {
-          imagesLoading.value = false
+          if (!signal.aborted) {
+              imagesLoading.value = false
+              fetchImagesController = null
+          }
       }
   }
 
