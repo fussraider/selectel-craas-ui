@@ -228,14 +228,17 @@ const breadcrumbs = computed(() => {
   a {
       color: $primary-color;
       text-decoration: none;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      transition: background-color 0.2s;
 
       &:hover {
-          text-decoration: underline;
+          background-color: rgba($primary-color, 0.1);
       }
   }
 
   .separator {
-      margin: 0 0.5rem;
+      margin: 0 0.2rem;
       color: $border-color;
   }
 }
