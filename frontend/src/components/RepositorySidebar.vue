@@ -54,8 +54,16 @@
                 class="repo-link"
                 active-class="active"
             >
-                <span class="repo-icon">📄</span>
-                {{ repo.name }}
+                <div class="repo-content">
+                    <div class="repo-name">
+                        <span class="repo-icon">📄</span>
+                        {{ repo.name }}
+                    </div>
+                    <div class="repo-meta">
+                        <span v-if="repo.size !== undefined">{{ formatSize(repo.size) }}</span>
+                        <span v-if="repo.updatedAt" class="meta-date">{{ formatDate(repo.updatedAt) }}</span>
+                    </div>
+                </div>
             </router-link>
         </div>
       </div>
@@ -75,9 +83,24 @@ const store = useRegistryStore()
 const refresh = async () => {
     await store.refreshStructure()
 }
+
+const formatSize = (bytes: number) => {
+    if (bytes === 0) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
+
+const formatDate = (dateStr: string) => {
+    if (!dateStr) return ''
+    const date = new Date(dateStr)
+    return date.toLocaleDateString() // Keep it short
+}
 </script>
 
 <style scoped lang="scss">
+@use "sass:color";
 @use '@/assets/main.scss' as *;
 
 .sidebar {
@@ -186,15 +209,12 @@ const refresh = async () => {
 }
 
 .repo-link {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    display: block; // Change to block for content container
     padding: 0.5rem 1rem 0.5rem 2rem; // Indent
-    font-size: 0.9rem;
-    color: $secondary-color;
     text-decoration: none;
     border-left: 2px solid transparent;
     transition: all 0.2s;
+    color: $secondary-color;
 
     &:hover {
         background-color: rgba($primary-color, 0.05);
@@ -205,8 +225,33 @@ const refresh = async () => {
         background-color: rgba($primary-color, 0.1);
         color: $primary-color;
         border-left-color: $primary-color;
-        font-weight: 500;
+
+        .repo-name {
+            font-weight: 500;
+        }
     }
+}
+
+.repo-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.repo-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.repo-meta {
+    font-size: 0.75rem;
+    color: color.adjust($secondary-color, $lightness: -20%);
+    margin-left: 1.4rem; // Align with text start (icon width + gap)
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0.8;
 }
 
 .registry-icon, .repo-icon {
