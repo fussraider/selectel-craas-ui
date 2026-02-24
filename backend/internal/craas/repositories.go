@@ -9,14 +9,17 @@ import (
 	"net/http"
 	"time"
 
-	v1 "github.com/selectel/craas-go/pkg"
+	clientv1 "github.com/selectel/craas-go/pkg/v1/client"
 	"github.com/selectel/craas-go/pkg/v1/repository"
 )
 
 // ListRepositories returns a list of repositories in the registry.
 func (s *Service) ListRepositories(ctx context.Context, token string, registryID string) ([]*repository.Repository, error) {
 	s.logger.Debug("listing repositories", "registry_id", registryID)
-	client := v1.NewCRaaSClientV1(token, s.endpoint)
+	client, err := clientv1.NewCRaaSClientV1(token, s.endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client: %w", err)
+	}
 
 	start := time.Now()
 	repos, _, err := repository.ListRepositories(ctx, client, registryID)
@@ -33,10 +36,13 @@ func (s *Service) ListRepositories(ctx context.Context, token string, registryID
 // DeleteRepository deletes the repository.
 func (s *Service) DeleteRepository(ctx context.Context, token string, registryID, repoName string) error {
 	s.logger.Info("deleting repository", "registry_id", registryID, "repository", repoName)
-	client := v1.NewCRaaSClientV1(token, s.endpoint)
+	client, err := clientv1.NewCRaaSClientV1(token, s.endpoint)
+	if err != nil {
+		return fmt.Errorf("failed to create client: %w", err)
+	}
 
 	start := time.Now()
-	_, err := repository.DeleteRepository(ctx, client, registryID, repoName)
+	_, err = repository.DeleteRepository(ctx, client, registryID, repoName)
 	duration := time.Since(start)
 
 	if err != nil {

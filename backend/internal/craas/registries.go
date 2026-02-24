@@ -8,14 +8,17 @@ import (
 	"net/http"
 	"time"
 
-	v1 "github.com/selectel/craas-go/pkg"
+	clientv1 "github.com/selectel/craas-go/pkg/v1/client"
 	"github.com/selectel/craas-go/pkg/v1/registry"
 )
 
 // ListRegistries returns a list of registries for the project (scoped by token).
 func (s *Service) ListRegistries(ctx context.Context, token string) ([]*registry.Registry, error) {
 	s.logger.Debug("listing registries")
-	client := v1.NewCRaaSClientV1(token, s.endpoint)
+	client, err := clientv1.NewCRaaSClientV1(token, s.endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client: %w", err)
+	}
 
 	start := time.Now()
 	registries, _, err := registry.List(ctx, client)
@@ -32,10 +35,13 @@ func (s *Service) ListRegistries(ctx context.Context, token string) ([]*registry
 // DeleteRegistry deletes the registry.
 func (s *Service) DeleteRegistry(ctx context.Context, token string, registryID string) error {
 	s.logger.Info("deleting registry", "registry_id", registryID)
-	client := v1.NewCRaaSClientV1(token, s.endpoint)
+	client, err := clientv1.NewCRaaSClientV1(token, s.endpoint)
+	if err != nil {
+		return fmt.Errorf("failed to create client: %w", err)
+	}
 
 	start := time.Now()
-	_, err := registry.Delete(ctx, client, registryID)
+	_, err = registry.Delete(ctx, client, registryID)
 	duration := time.Since(start)
 
 	if err != nil {
