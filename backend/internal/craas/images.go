@@ -11,14 +11,17 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	v1 "github.com/selectel/craas-go/pkg"
+	clientv1 "github.com/selectel/craas-go/pkg/v1/client"
 	"github.com/selectel/craas-go/pkg/v1/repository"
 )
 
 // ListImages returns a list of images in the repository.
 func (s *Service) ListImages(ctx context.Context, token string, registryID, repoName string) ([]*repository.Image, error) {
 	s.logger.Debug("listing images", "registry_id", registryID, "repository", repoName)
-	client := v1.NewCRaaSClientV1(token, s.endpoint)
+	client, err := clientv1.NewCRaaSClientV1(token, s.endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client: %w", err)
+	}
 
 	start := time.Now()
 	images, _, err := repository.ListImages(ctx, client, registryID, repoName)
@@ -198,7 +201,10 @@ func findDigests(data interface{}, seen map[string]struct{}, result *[]string) {
 // ListTags returns a list of tags in the repository.
 func (s *Service) ListTags(ctx context.Context, token string, registryID, repoName string) ([]string, error) {
 	s.logger.Debug("listing tags", "registry_id", registryID, "repository", repoName)
-	client := v1.NewCRaaSClientV1(token, s.endpoint)
+	client, err := clientv1.NewCRaaSClientV1(token, s.endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client: %w", err)
+	}
 
 	start := time.Now()
 	tags, _, err := repository.ListTags(ctx, client, registryID, repoName)
@@ -215,10 +221,13 @@ func (s *Service) ListTags(ctx context.Context, token string, registryID, repoNa
 // DeleteImage deletes the image by digest.
 func (s *Service) DeleteImage(ctx context.Context, token string, registryID, repoName, digest string) error {
 	s.logger.Info("deleting image", "registry_id", registryID, "repository", repoName, "digest", digest)
-	client := v1.NewCRaaSClientV1(token, s.endpoint)
+	client, err := clientv1.NewCRaaSClientV1(token, s.endpoint)
+	if err != nil {
+		return fmt.Errorf("failed to create client: %w", err)
+	}
 
 	start := time.Now()
-	_, err := repository.DeleteImageManifest(ctx, client, registryID, repoName, digest)
+	_, err = repository.DeleteImageManifest(ctx, client, registryID, repoName, digest)
 	duration := time.Since(start)
 
 	if err != nil {
