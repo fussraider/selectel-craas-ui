@@ -35,6 +35,18 @@ A modern, full-stack web interface for managing Selectel Container Registry (CRa
 The application is configured via environment variables. You can set these directly or use a `.env` file in the
 `backend/` directory.
 
+### Selectel Authorization
+
+To connect to the Selectel Container Registry, you need credentials for a user with access to your project. It is **strongly recommended** to create a dedicated Service User for this purpose.
+
+1.  Log in to the **Selectel Control Panel**.
+2.  Navigate to **Identity & Access Management** > **User Management**.
+3.  Create a new **Service User** (or use an existing one).
+    -   Note the **User Name** (`SELECTEL_USERNAME`) and **Password** (`SELECTEL_PASSWORD`).
+    -   Note the **Account ID** (`SELECTEL_ACCOUNT_ID`) from the top-right corner of the panel (numeric ID).
+4.  Ensure the user has access to the project containing your registries.
+    -   Note the **Project Name** (`SELECTEL_PROJECT_NAME`).
+
 ### Core Configuration
 
 | Variable                | Description                      | Default    |
@@ -45,16 +57,27 @@ The application is configured via environment variables. You can set these direc
 | `SELECTEL_PASSWORD`     | Selectel Password                | (Required) |
 | `SELECTEL_PROJECT_NAME` | Selectel Project Name (Required) | (Required) |
 
-### Feature Flags (Destructive Actions)
+### Web Interface Security
 
-Control which delete operations are permitted. If disabled, the corresponding buttons in the UI will be inactive with a
-tooltip explaining the restriction.
+You can protect the web interface with Basic Authentication to restrict access.
 
-| Variable                   | Description                               | Default |
-|:---------------------------|:------------------------------------------|:--------|
-| `ENABLE_DELETE_REGISTRY`   | Allow deletion of entire registries       | `false` |
-| `ENABLE_DELETE_REPOSITORY` | Allow deletion of repositories            | `false` |
-| `ENABLE_DELETE_IMAGE`      | Allow deletion of images (single or bulk) | `false` |
+| Variable        | Description                              | Default               |
+|:----------------|:-----------------------------------------|:----------------------|
+| `AUTH_ENABLED`  | Enable Basic Auth for the web interface  | `false`               |
+| `AUTH_LOGIN`    | Username for web interface login         | (Required if enabled) |
+| `AUTH_PASSWORD` | Password for web interface login         | (Required if enabled) |
+| `JWT_SECRET`    | Secret key for signing JWT tokens        | (Required if enabled) |
+
+### Feature Flags & Safety
+
+Control which operations are permitted and protect critical resources.
+
+| Variable                   | Description                                         | Default |
+|:---------------------------|:----------------------------------------------------|:--------|
+| `ENABLE_DELETE_REGISTRY`   | Allow deletion of entire registries                 | `false` |
+| `ENABLE_DELETE_REPOSITORY` | Allow deletion of repositories                      | `false` |
+| `ENABLE_DELETE_IMAGE`      | Allow deletion of images (single or bulk)           | `false` |
+| `PROTECTED_TAGS`           | Comma-separated list of tags that cannot be deleted | (empty) |
 
 ### Logging
 
