@@ -1,5 +1,8 @@
 FROM nginx:alpine
 
+# Install jq for safe JSON processing in entrypoint
+RUN apk add --no-cache jq
+
 # Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
 
