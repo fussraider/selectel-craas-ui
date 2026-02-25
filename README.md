@@ -57,6 +57,9 @@ To connect to the Selectel Container Registry, you need credentials for a user w
 | `SELECTEL_ACCOUNT_ID`   | Selectel Account ID              | (Required) |
 | `SELECTEL_PASSWORD`     | Selectel Password                | (Required) |
 | `SELECTEL_PROJECT_NAME` | Selectel Project Name (Required) | (Required) |
+| `SELECTEL_AUTH_URL`     | Selectel Auth URL                | `https://cloud.api.selcloud.ru/identity/v3/auth/tokens` |
+| `SELECTEL_PROJ_URL`     | Selectel Projects URL            | `https://cloud.api.selcloud.ru/identity/v3/auth/projects` |
+| `SELECTEL_CRAAS_URL`    | Selectel CRaaS API Endpoint      | `https://cr.selcloud.ru/api/v1` |
 | `CORS_ALLOWED_ORIGIN`   | Allowed Origin for CORS requests | `*`        |
 
 ### Web Interface Security

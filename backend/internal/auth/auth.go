@@ -41,8 +41,8 @@ func New(cfg *config.Config, logger *slog.Logger) *Client {
 	return &Client{
 		cfg:           cfg,
 		client:        &http.Client{Timeout: 60 * time.Second},
-		AuthURL:       "https://cloud.api.selcloud.ru/identity/v3/auth/tokens",
-		ProjURL:       "https://cloud.api.selcloud.ru/identity/v3/auth/projects",
+		AuthURL:       cfg.SelectelAuthURL,
+		ProjURL:       cfg.SelectelProjURL,
 		projectTokens: make(map[string]string),
 		logger:        logger.With("service", "auth"),
 	}

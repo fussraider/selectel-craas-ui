@@ -15,6 +15,9 @@ type Config struct {
 	SelectelAccountID   string
 	SelectelPassword    string
 	SelectelProjectName string
+	SelectelAuthURL     string
+	SelectelProjURL     string
+	SelectelCraasURL    string
 	LogLevel            string // "debug", "info", "warn", "error"
 	LogFormat           string // "text", "json"
 
@@ -47,6 +50,9 @@ func Load() (*Config, error) {
 		SelectelAccountID:   getEnv("SELECTEL_ACCOUNT_ID", ""),
 		SelectelPassword:    getEnv("SELECTEL_PASSWORD", ""),
 		SelectelProjectName: getEnv("SELECTEL_PROJECT_NAME", ""),
+		SelectelAuthURL:     getEnv("SELECTEL_AUTH_URL", "https://cloud.api.selcloud.ru/identity/v3/auth/tokens"),
+		SelectelProjURL:     getEnv("SELECTEL_PROJ_URL", "https://cloud.api.selcloud.ru/identity/v3/auth/projects"),
+		SelectelCraasURL:    getEnv("SELECTEL_CRAAS_URL", "https://cr.selcloud.ru/api/v1"),
 		LogLevel:            getEnv("LOG_LEVEL", "INFO"),
 		LogFormat:           getEnv("LOG_FORMAT", "TEXT"),
 

@@ -3,9 +3,9 @@ package craas
 import (
 	"log/slog"
 	"regexp"
-)
 
-const Endpoint = "https://cr.selcloud.ru/api/v1"
+	"github.com/generic/selectel-craas-web/internal/config"
+)
 
 // digestRegex matches standard SHA256 digests.
 var digestRegex = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)
@@ -15,9 +15,9 @@ type Service struct {
 	logger   *slog.Logger
 }
 
-func New(logger *slog.Logger) *Service {
+func New(cfg *config.Config, logger *slog.Logger) *Service {
 	return &Service{
-		endpoint: Endpoint,
+		endpoint: cfg.SelectelCraasURL,
 		logger:   logger.With("service", "craas"),
 	}
 }

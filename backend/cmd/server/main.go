@@ -44,7 +44,7 @@ func main() {
 	}
 
 	authClient := auth.New(cfg, appLogger)
-	craasService := craas.New(appLogger)
+	craasService := craas.New(cfg, appLogger)
 
 	router := api.New(authClient, craasService, appLogger, cfg)
 
