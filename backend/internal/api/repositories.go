@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/generic/selectel-craas-web/internal/craas"
+	"github.com/go-chi/chi/v5"
 )
 
 func (s *Server) ListRepositories(w http.ResponseWriter, r *http.Request) {
@@ -99,16 +99,20 @@ func (s *Server) CleanupRepository(w http.ResponseWriter, r *http.Request) {
 				digestTags[img.Digest] = img.Tags
 			}
 
+			// Optimize: Build map for protected tags
+			protectedTagsMap := make(map[string]struct{}, len(s.Config.ProtectedTags))
+			for _, tag := range s.Config.ProtectedTags {
+				protectedTagsMap[tag] = struct{}{}
+			}
+
 			// Check requested digests
 			for _, digest := range req.Digests {
 				if tags, ok := digestTags[digest]; ok {
 					for _, tag := range tags {
-						for _, protected := range s.Config.ProtectedTags {
-							if tag == protected {
-								protectedFound = true
-								protectedTag = tag
-								return nil // Stop checking
-							}
+						if _, isProtected := protectedTagsMap[tag]; isProtected {
+							protectedFound = true
+							protectedTag = tag
+							return nil // Stop checking
 						}
 					}
 				}
