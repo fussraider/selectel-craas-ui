@@ -20,6 +20,8 @@ services:
       - ENABLE_DELETE_IMAGE=true
       # Protected tags (comma separated)
       - PROTECTED_TAGS=latest,stable
+      # CORS (for local development, this needs to match the frontend origin)
+      - CORS_ALLOWED_ORIGIN=http://localhost
 
   frontend:
     #image: ghcr.io/fussraider/selectel-craas-ui-frontend:latest

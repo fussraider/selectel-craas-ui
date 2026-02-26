@@ -67,7 +67,7 @@ func Load() (*Config, error) {
 		AuthPassword: getEnv("AUTH_PASSWORD", ""),
 		JWTSecret:    getEnv("JWT_SECRET", ""),
 
-		CORSAllowedOrigin: getEnv("CORS_ALLOWED_ORIGIN", "*"),
+		CORSAllowedOrigin: getEnv("CORS_ALLOWED_ORIGIN", ""),
 	}, nil
 }
 
