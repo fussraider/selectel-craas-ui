@@ -3,11 +3,11 @@ package api
 import (
 	"log/slog"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/generic/selectel-craas-web/internal/auth"
 	"github.com/generic/selectel-craas-web/internal/config"
 	"github.com/generic/selectel-craas-web/internal/craas"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type Server struct {
