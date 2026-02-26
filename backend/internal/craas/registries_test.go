@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/generic/selectel-craas-web/internal/config"
 )
 
 func TestService_GetGCInfo(t *testing.T) {
@@ -33,7 +35,7 @@ func TestService_GetGCInfo(t *testing.T) {
 
 	// Service
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	svc := New(logger)
+	svc := New(&config.Config{}, logger)
 	svc.endpoint = server.URL // Override endpoint
 
 	// Test
@@ -62,7 +64,7 @@ func TestService_StartGC(t *testing.T) {
 
 	// Service
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	svc := New(logger)
+	svc := New(&config.Config{}, logger)
 	svc.endpoint = server.URL
 
 	// Test
@@ -81,7 +83,7 @@ func TestService_StartGC_Conflict(t *testing.T) {
 
 	// Service
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	svc := New(logger)
+	svc := New(&config.Config{}, logger)
 	svc.endpoint = server.URL
 
 	// Test
