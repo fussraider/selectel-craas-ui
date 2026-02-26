@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/generic/selectel-craas-web/internal/config"
 )
 
 func TestService_GetGCInfo(t *testing.T) {
@@ -33,7 +35,7 @@ func TestService_GetGCInfo(t *testing.T) {
 
 	// Service
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	svc := New(logger)
+	svc := New(&config.Config{}, logger)
 	svc.endpoint = server.URL // Override endpoint
 
 	// Test
@@ -62,7 +64,7 @@ func TestService_StartGC(t *testing.T) {
 
 	// Service
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	svc := New(logger)
+	svc := New(&config.Config{}, logger)
 	svc.endpoint = server.URL
 
 	// Test
@@ -81,7 +83,7 @@ func TestService_StartGC_Conflict(t *testing.T) {
 
 	// Service
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	svc := New(logger)
+	svc := New(&config.Config{}, logger)
 	svc.endpoint = server.URL
 
 	// Test
@@ -91,5 +93,50 @@ func TestService_StartGC_Conflict(t *testing.T) {
 	}
 	if err.Error() != "garbage collection already in progress" {
 		t.Errorf("expected 'garbage collection already in progress', got '%s'", err.Error())
+	}
+}
+
+func TestService_StartGC_Unauthorized(t *testing.T) {
+	// Mock server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer server.Close()
+
+	// Service
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	svc := New(&config.Config{}, logger)
+	svc.endpoint = server.URL
+
+	// Test
+	err := svc.StartGC(context.Background(), "test-token", "reg-1")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err != ErrUnauthorized {
+		t.Errorf("expected ErrUnauthorized, got %v", err)
+	}
+}
+
+func TestService_StartGC_GenericError(t *testing.T) {
+	// Mock server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	// Service
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	svc := New(&config.Config{}, logger)
+	svc.endpoint = server.URL
+
+	// Test
+	err := svc.StartGC(context.Background(), "test-token", "reg-1")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	expected := "request failed with status: 500"
+	if err.Error() != expected {
+		t.Errorf("expected '%s', got '%s'", expected, err.Error())
 	}
 }
