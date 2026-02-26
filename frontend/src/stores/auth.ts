@@ -3,34 +3,53 @@ import { ref, computed } from 'vue'
 import client from '@/api/client'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref<string | null>(localStorage.getItem('auth_token'))
   const user = ref<string | null>(localStorage.getItem('auth_user'))
 
-  const isAuthenticated = computed(() => !!token.value)
+  const isAuthenticated = computed(() => !!user.value)
 
-  const login = async (creds: {login: string, password: string}) => {
-    const res = await client.post<{token: string}>('/login', creds)
-    token.value = res.data.token
-    localStorage.setItem('auth_token', res.data.token)
-
-    user.value = creds.login
-    localStorage.setItem('auth_user', creds.login)
+  const checkAuth = async () => {
+    try {
+      const res = await client.get<{authenticated: boolean, user: string}>('/auth/check')
+      if (res.data.authenticated) {
+        user.value = res.data.user
+        localStorage.setItem('auth_user', res.data.user)
+      } else {
+        throw new Error('Not authenticated')
+      }
+    } catch (e) {
+      user.value = null
+      localStorage.removeItem('auth_user')
+      throw e
+    }
   }
 
-  const logout = () => {
-    token.value = null
-    user.value = null
-    localStorage.removeItem('auth_token')
-    localStorage.removeItem('auth_user')
-    // We might need to redirect here or let the caller handle it.
-    // Often it's cleaner to let the router guard handle redirection after state change.
+  const login = async (creds: {login: string, password: string}) => {
+    const res = await client.post<{user: string}>('/login', creds)
+
+    // Set user state
+    user.value = res.data.user
+    localStorage.setItem('auth_user', res.data.user)
+
+    // Verify session
+    await checkAuth()
+  }
+
+  const logout = async () => {
+    try {
+      await client.post('/logout')
+    } catch {
+      // Ignore errors during logout
+    } finally {
+      user.value = null
+      localStorage.removeItem('auth_user')
+    }
   }
 
   return {
-    token,
     user,
     isAuthenticated,
     login,
-    logout
+    logout,
+    checkAuth
   }
 })

@@ -4,8 +4,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/generic/selectel-craas-web/internal/config"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func TestEnableCORS(t *testing.T) {
@@ -123,5 +125,94 @@ func TestSecurityHeaders(t *testing.T) {
 		if val := rr.Header().Get(k); val != v {
 			t.Errorf("header %s: got %s want %s", k, val, v)
 		}
+	}
+}
+
+func TestAuthMiddleware(t *testing.T) {
+	secret := "test-secret"
+	cfg := &config.Config{
+		AuthEnabled: true,
+		JWTSecret:   secret,
+	}
+	server := &Server{
+		Config: cfg,
+	}
+
+	// Create a valid token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": "testuser",
+		"exp": time.Now().Add(time.Hour).Unix(),
+	})
+	tokenString, _ := token.SignedString([]byte(secret))
+
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, ok := r.Context().Value("user").(string)
+		if !ok || user != "testuser" {
+			w.WriteHeader(http.StatusForbidden) // User not in context or wrong
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	handler := server.AuthMiddleware(nextHandler)
+
+	tests := []struct {
+		name           string
+		cookieName     string
+		cookieValue    string
+		authHeader     string
+		expectedStatus int
+	}{
+		{
+			name:           "No Auth",
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name:           "Valid Cookie",
+			cookieName:     "auth_token",
+			cookieValue:    tokenString,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Valid Header",
+			authHeader:     "Bearer " + tokenString,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Invalid Cookie",
+			cookieName:     "auth_token",
+			cookieValue:    "invalid",
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name:           "Invalid Header",
+			authHeader:     "Bearer invalid",
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name:           "Wrong Cookie Name",
+			cookieName:     "wrong_token",
+			cookieValue:    tokenString,
+			expectedStatus: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/", nil)
+			if tt.cookieName != "" {
+				req.AddCookie(&http.Cookie{Name: tt.cookieName, Value: tt.cookieValue})
+			}
+			if tt.authHeader != "" {
+				req.Header.Set("Authorization", tt.authHeader)
+			}
+
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
+
+			if rr.Code != tt.expectedStatus {
+				t.Errorf("expected status %d, got %d", tt.expectedStatus, rr.Code)
+			}
+		})
 	}
 }
