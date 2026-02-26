@@ -17,6 +17,8 @@ import (
 	"github.com/generic/selectel-craas-web/pkg/logger"
 )
 
+var Version = "dev"
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -24,7 +26,7 @@ func main() {
 	}
 
 	appLogger := logger.New(cfg.LogLevel, cfg.LogFormat)
-	appLogger.Info("starting application", "port", cfg.WebPort, "log_level", cfg.LogLevel)
+	appLogger.Info("starting application", "version", Version, "port", cfg.WebPort, "log_level", cfg.LogLevel)
 
 	// Auth validation
 	if cfg.AuthEnabled {
