@@ -61,7 +61,8 @@ func (s *Service) CleanupRepository(ctx context.Context, token, registryID, repo
 	s.logger.Info("cleaning up repository", "registry_id", registryID, "repository", repoName, "digest_count", len(digests), "disable_gc", disableGC)
 
 	encodedRepoName := url.PathEscape(repoName)
-	cleanupUrl := fmt.Sprintf("%s/registries/%s/repositories/%s/cleanup", s.endpoint, registryID, encodedRepoName)
+	encodedRegistryID := url.PathEscape(registryID)
+	cleanupUrl := fmt.Sprintf("%s/registries/%s/repositories/%s/cleanup", s.endpoint, encodedRegistryID, encodedRepoName)
 
 	reqBody := CleanupRequest{
 		Digests:   digests,
