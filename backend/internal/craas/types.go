@@ -1,9 +1,22 @@
 package craas
 
+// DeletedImage represents an image that was successfully deleted.
+type DeletedImage struct {
+	Digest string   `json:"digest"`
+	Tags   []string `json:"tags,omitempty"`
+}
+
+// FailedImage represents an image that failed to be deleted.
+type FailedImage struct {
+	Digest string   `json:"digest"`
+	Tags   []string `json:"tags,omitempty"`
+	Error  string   `json:"error"`
+}
+
 // CleanupResult represents the result of a cleanup operation.
 type CleanupResult struct {
-	Deleted []interface{} `json:"deleted"`
-	Failed  []interface{} `json:"failed"`
+	Deleted []DeletedImage `json:"deleted"`
+	Failed  []FailedImage  `json:"failed"`
 }
 
 // CleanupRequest represents the request body for cleanup operation.
