@@ -185,7 +185,8 @@ export const useRegistryStore = defineStore('registry', () => {
               params: { repository: rname }
           })
 
-          images.value = images.value.filter(i => !digests.includes(i.digest))
+          const digestsSet = new Set(digests)
+          images.value = images.value.filter(i => !digestsSet.has(i.digest))
           success.value = `Cleanup successful: ${res.data.deleted.length} images deleted.`
       } catch (err) {
           handleError(err)
