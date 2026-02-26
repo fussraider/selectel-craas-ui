@@ -253,14 +253,18 @@ const {
   closeModal
 } = useConfirmModal(rname, selectedImagesCount)
 
-const filteredImages = computed(() => {
-    const images = store.images.slice().sort((a, b) => {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+const sortedImages = computed(() => {
+    return store.images.slice().sort((a, b) => {
+        if (b.createdAt > a.createdAt) return 1
+        if (b.createdAt < a.createdAt) return -1
+        return 0
     })
+})
 
-    if (!searchQuery.value) return images
+const filteredImages = computed(() => {
+    if (!searchQuery.value) return sortedImages.value
     const query = searchQuery.value.toLowerCase()
-    return images.filter(img =>
+    return sortedImages.value.filter(img =>
         img.tags && img.tags.some(tag => tag.toLowerCase().includes(query))
     )
 })
