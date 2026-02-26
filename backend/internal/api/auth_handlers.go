@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -30,7 +31,10 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Login != s.Config.AuthLogin || req.Password != s.Config.AuthPassword {
+	loginMatch := subtle.ConstantTimeCompare([]byte(req.Login), []byte(s.Config.AuthLogin))
+	passMatch := subtle.ConstantTimeCompare([]byte(req.Password), []byte(s.Config.AuthPassword))
+
+	if loginMatch&passMatch != 1 {
 		RespondError(w, http.StatusUnauthorized, errors.New("invalid credentials"))
 		return
 	}
