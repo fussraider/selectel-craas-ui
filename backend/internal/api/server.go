@@ -11,18 +11,20 @@ import (
 )
 
 type Server struct {
-	Auth   *auth.Client
-	Craas  *craas.Service
-	Logger *slog.Logger
-	Config *config.Config
+	Auth        *auth.Client
+	Craas       *craas.Service
+	Logger      *slog.Logger
+	Config      *config.Config
+	RateLimiter *RateLimiter
 }
 
 func New(auth *auth.Client, craas *craas.Service, logger *slog.Logger, cfg *config.Config) *chi.Mux {
 	s := &Server{
-		Auth:   auth,
-		Craas:  craas,
-		Logger: logger.With("service", "api"),
-		Config: cfg,
+		Auth:        auth,
+		Craas:       craas,
+		Logger:      logger.With("service", "api"),
+		Config:      cfg,
+		RateLimiter: NewRateLimiter(),
 	}
 
 	r := chi.NewRouter()
@@ -33,7 +35,7 @@ func New(auth *auth.Client, craas *craas.Service, logger *slog.Logger, cfg *conf
 
 	// Public routes
 	r.Get("/api/config", s.GetConfig)
-	r.Post("/api/login", s.Login)
+	r.With(s.RateLimiter.RateLimit).Post("/api/login", s.Login)
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
