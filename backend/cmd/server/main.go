@@ -41,6 +41,10 @@ func main() {
 
 	if cfg.CORSAllowedOrigin == "*" {
 		appLogger.Warn("CORS: ALLOWED_ORIGIN is set to '*' (INSECURE). Do not use this in production.")
+	} else if cfg.CORSAllowedOrigin == "" {
+		appLogger.Info("CORS: ALLOWED_ORIGIN is empty (CORS disabled). Requests from other origins will be blocked.")
+	} else {
+		appLogger.Info("CORS: ALLOWED_ORIGIN is set", "origin", cfg.CORSAllowedOrigin)
 	}
 
 	authClient := auth.New(cfg, appLogger)
