@@ -77,10 +77,11 @@
          </span>
       </div>
 
-      <div v-if="store.error && !store.imagesLoading" class="error-state">
-          <p>Failed to load images.</p>
-          <button @click="fetchData" class="btn small-btn">Retry</button>
-      </div>
+      <ErrorState
+        v-if="store.error && !store.imagesLoading"
+        title="Failed to load images."
+        :retry="fetchData"
+      />
       <div v-else-if="filteredImages.length === 0 && !store.imagesLoading" class="empty-state">No images found.</div>
       <div
         v-else
@@ -220,6 +221,7 @@ import { onMounted, onUnmounted, computed, ref, watch, useTemplateRef } from 'vu
 import { useRoute, useRouter } from 'vue-router'
 import ToastNotification from '@/components/ToastNotification.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import ErrorState from '@/components/ErrorState.vue'
 import { useConfirmModal } from '@/composables/useConfirmModal'
 
 const router = useRouter()
@@ -652,31 +654,6 @@ const copyToClipboard = (text: string, id: string) => {
     border-radius: 8px;
 }
 
-.error-state {
-    @extend .empty-state;
-    color: $danger-color;
-    border-color: rgba($danger-color, 0.3);
-    background-color: rgba($danger-color, 0.05);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-
-    p {
-        margin: 0;
-        font-weight: bold;
-    }
-
-    button {
-        background-color: $card-bg;
-        border: 1px solid $border-color;
-        color: $text-color;
-
-        &:hover {
-            background-color: color.adjust($card-bg, $lightness: 5%);
-        }
-    }
-}
 
 .list-controls {
     display: flex;

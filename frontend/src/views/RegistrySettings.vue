@@ -20,10 +20,11 @@
 
     <div class="card info-card">
         <h3>Registry Information</h3>
-        <div v-if="store.error" class="error-msg">
-            <p>Failed to load registry info.</p>
-            <button @click="fetchData" class="btn small-btn">Retry</button>
-        </div>
+        <ErrorState
+            v-if="store.error"
+            title="Failed to load registry info."
+            :retry="fetchData"
+        />
         <div v-else class="info-grid">
             <div class="info-item">
                 <span class="label">ID:</span>
@@ -56,9 +57,10 @@
         </p>
 
         <div v-if="store.gcLoading" class="loading">Loading GC info...</div>
-        <div v-else-if="store.error && !store.gcInfo" class="error-msg">
-             Failed to load GC info.
-        </div>
+        <ErrorState
+            v-else-if="store.error && !store.gcInfo"
+            title="Failed to load GC info."
+        />
         <div v-else-if="store.gcInfo" class="gc-stats">
             <div class="stat">
                 <span class="stat-label">Potential Savings</span>
@@ -116,6 +118,7 @@ import { onMounted, computed, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import ToastNotification from '@/components/ToastNotification.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -314,29 +317,6 @@ const confirmDelete = async () => {
     }
 }
 
-.error-msg {
-    padding: 1rem;
-    margin-bottom: 1rem;
-    background-color: rgba($danger-color, 0.1);
-    color: $danger-color;
-    border-radius: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    p { margin: 0; font-weight: bold; }
-
-    .btn {
-        background-color: $card-bg;
-        border: 1px solid rgba($danger-color, 0.3);
-        color: $text-color;
-        padding: 0.3rem 0.8rem;
-
-        &:hover {
-            background-color: color.adjust($card-bg, $lightness: 5%);
-        }
-    }
-}
 
 .success-msg {
     padding: 1rem;

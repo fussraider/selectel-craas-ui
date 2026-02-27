@@ -4,10 +4,11 @@
       <h1>Welcome to CRaaS Console</h1>
       <p>Select a repository from the sidebar to view images.</p>
 
-      <div v-if="store.error" class="error-container">
-          <p class="error-text">Failed to load projects.</p>
-          <button @click="store.fetchProjects" class="btn small-btn">Retry</button>
-      </div>
+      <ErrorState
+        v-if="store.error"
+        title="Failed to load projects."
+        :retry="store.fetchProjects"
+      />
 
       <p class="hint" v-else-if="store.loading">Loading projects...</p>
       <p class="hint" v-else-if="store.selectedProjectId">Current Project: {{ store.selectedProjectId }}</p>
@@ -26,6 +27,7 @@
 <script setup lang="ts">
 import { useRegistryStore } from '@/stores/registry'
 import ToastNotification from '@/components/ToastNotification.vue'
+import ErrorState from '@/components/ErrorState.vue'
 const store = useRegistryStore()
 </script>
 
@@ -52,34 +54,4 @@ const store = useRegistryStore()
     .hint { color: $secondary-color; font-size: 0.9rem; margin-top: 1rem; }
 }
 
-.error-container {
-    margin-top: 1rem;
-    padding: 1rem;
-    background-color: rgba($danger-color, 0.1);
-    border: 1px solid rgba($danger-color, 0.3);
-    border-radius: 6px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-
-    .error-text {
-        color: $danger-color;
-        font-weight: bold;
-        font-size: 1rem;
-    }
-
-    .btn {
-        background-color: $card-bg;
-        border: 1px solid $border-color;
-        color: $text-color;
-        padding: 0.3rem 0.8rem;
-        border-radius: 4px;
-        cursor: pointer;
-
-        &:hover {
-            background-color: color.adjust($card-bg, $lightness: 5%);
-        }
-    }
-}
 </style>
