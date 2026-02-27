@@ -40,13 +40,22 @@ func TestLogin(t *testing.T) {
 			expectCookie:   false,
 		},
 		{
-			name:           "Invalid Credentials",
+			name:           "Invalid Password",
 			authEnabled:    true,
 			authLogin:      "admin",
 			authPassword:   "password",
 			requestBody:    LoginRequest{Login: "admin", Password: "wrong-password"},
 			expectedStatus: http.StatusUnauthorized,
 			expectCookie:   false,
+		},
+		{
+			name:           "Invalid Login",
+			authEnabled:    true,
+			authLogin:      "admin",
+			authPassword:   "password",
+			requestBody:    LoginRequest{Login: "wrong-user", Password: "password"},
+			expectedStatus: http.StatusUnauthorized,
+			expectToken:    false,
 		},
 		{
 			name:           "Successful Login",
