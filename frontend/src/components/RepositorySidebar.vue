@@ -305,10 +305,10 @@ const logout = () => {
 .info-row {
     justify-content: flex-start;
     gap: 0.5rem;
-    padding-top: 0.5rem;
 }
 
 .info-row.with-separator {
+    padding-top: 0.5rem;
     border-top: 1px solid rgba($border-color, 0.3);
 }
 
