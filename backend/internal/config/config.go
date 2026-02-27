@@ -25,6 +25,7 @@ type Config struct {
 	EnableDeleteRegistry   bool
 	EnableDeleteRepository bool
 	EnableDeleteImage      bool
+	EnableMissingTagsCheck bool
 
 	ProtectedTags []string
 
@@ -59,6 +60,7 @@ func Load() (*Config, error) {
 		EnableDeleteRegistry:   getEnvBool("ENABLE_DELETE_REGISTRY", false),
 		EnableDeleteRepository: getEnvBool("ENABLE_DELETE_REPOSITORY", false),
 		EnableDeleteImage:      getEnvBool("ENABLE_DELETE_IMAGE", false),
+		EnableMissingTagsCheck: getEnvBool("ENABLE_MISSING_TAGS_CHECK", true),
 
 		ProtectedTags: getEnvSlice("PROTECTED_TAGS", nil),
 

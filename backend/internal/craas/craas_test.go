@@ -69,7 +69,12 @@ func TestListImages(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
+	// We need missing tags check enabled to pass this test logic
+	svc := &Service{
+		endpoint:               ts.URL + "/v1",
+		logger:                 testLogger,
+		enableMissingTagsCheck: true,
+	}
 	images, err := svc.ListImages(context.Background(), "fake-token", "reg1", "repo1")
 
 	assert.NoError(t, err)
@@ -170,7 +175,12 @@ func TestListImages_MissingTags(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
+	// We need missing tags check enabled to pass this test logic
+	svc := &Service{
+		endpoint:               ts.URL + "/v1",
+		logger:                 testLogger,
+		enableMissingTagsCheck: true,
+	}
 	images, err := svc.ListImages(context.Background(), "fake-token", "reg1", "repo1")
 
 	assert.NoError(t, err)

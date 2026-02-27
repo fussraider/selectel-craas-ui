@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
@@ -29,19 +28,28 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 	encodedRepoName := url.PathEscape(repoName)
 
 	start := time.Now()
-	// Use fetchAllImages to handle pagination and retrieve all images using the library client
-	images, err := s.fetchAllImages(ctx, client, registryID, repoName)
+	// Revert to using the standard repository.ListImages
+	images, _, err := repository.ListImages(ctx, client, registryID, encodedRepoName)
 
 	if err != nil {
 		s.logger.Error("failed to list images", "registry_id", registryID, "repository", repoName, "error", err)
 		return nil, err
 	}
 
+	if s.enableMissingTagsCheck {
+		images = s.resolveMissingTags(ctx, client, token, registryID, encodedRepoName, images)
+	}
+
+	s.logger.Info("listed images", "registry_id", registryID, "repository", repoName, "count", len(images), "duration", time.Since(start))
+	return images, nil
+}
+
+func (s *Service) resolveMissingTags(ctx context.Context, client *clientv1.ServiceClient, token, registryID, encodedRepoName string, images []*repository.Image) []*repository.Image {
 	// Fetch all tags to check for missing ones
 	allTags, _, err := repository.ListTags(ctx, client, registryID, encodedRepoName)
 	if err != nil {
-		s.logger.Warn("failed to list tags for verification", "registry_id", registryID, "repository", repoName, "error", err)
-		return images, nil
+		s.logger.Warn("failed to list tags for verification", "registry_id", registryID, "repository", encodedRepoName, "error", err)
+		return images
 	}
 
 	// Create a map of existing images by digest
@@ -71,7 +79,7 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 		}
 
 		g, ctx := errgroup.WithContext(ctx)
-		g.SetLimit(5) // Revert to 5 for safety, pagination should handle most cases
+		g.SetLimit(5) // Limit concurrency
 
 		var mu sync.Mutex
 
@@ -123,73 +131,7 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 			s.logger.Error("error resolving missing tags", "error", err)
 		}
 	}
-
-	s.logger.Info("listed images", "registry_id", registryID, "repository", repoName, "count", len(images), "duration", time.Since(start))
-	return images, nil
-}
-
-// fetchAllImages handles pagination for listing images using the library client.
-func (s *Service) fetchAllImages(ctx context.Context, client *clientv1.ServiceClient, registryID, repoName string) ([]*repository.Image, error) {
-	encodedRepoName := url.PathEscape(repoName)
-	// Base path relative to client's endpoint (client handles endpoint prefix)
-	// Assuming endpoint is like "http://host/v1", client.DoRequest("GET", "/registries/...", ...) -> "http://host/v1/registries/..."
-	initialURL := fmt.Sprintf("%s/registries/%s/repositories/%s/images", s.endpoint, registryID, encodedRepoName)
-
-	var allImages []*repository.Image
-	nextURL := initialURL
-
-	for nextURL != "" {
-		// Use client.DoRequest which handles authentication and base URL
-		resp, err := client.DoRequest(ctx, "GET", nextURL, nil)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Response.Body.Close()
-
-		if resp.Response.StatusCode != http.StatusOK {
-			// Read body for error details (limited size)
-			bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Response.Body, 1024))
-			return nil, fmt.Errorf("unexpected status code %d: %s", resp.Response.StatusCode, string(bodyBytes))
-		}
-
-		var pageImages []*repository.Image
-		if err := json.NewDecoder(resp.Response.Body).Decode(&pageImages); err != nil {
-			return nil, fmt.Errorf("failed to decode images: %w", err)
-		}
-
-		allImages = append(allImages, pageImages...)
-
-		linkHeader := resp.Response.Header.Get("Link")
-		nextURL = parseNextLink(linkHeader)
-	}
-
-	return allImages, nil
-}
-
-// parseNextLink extracts the URL for rel="next" from the Link header.
-func parseNextLink(header string) string {
-	links := strings.Split(header, ",")
-	for _, link := range links {
-		parts := strings.Split(link, ";")
-		if len(parts) < 2 {
-			continue
-		}
-
-		urlPart := strings.TrimSpace(parts[0])
-		if !strings.HasPrefix(urlPart, "<") || !strings.HasSuffix(urlPart, ">") {
-			continue
-		}
-
-		url := urlPart[1 : len(urlPart)-1]
-
-		for _, param := range parts[1:] {
-			param = strings.TrimSpace(param)
-			if param == `rel="next"` {
-				return url
-			}
-		}
-	}
-	return ""
+	return images
 }
 
 // fetchImageDigests fetches the digest(s) associated with a tag.
