@@ -60,15 +60,25 @@
       </div>
     </div>
 
-    <div v-if="configStore.authEnabled" class="sidebar-footer">
-        <button @click="logout" class="logout-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-            Sign Out
-        </button>
+    <div class="sidebar-footer">
+        <div class="footer-row" v-if="configStore.authEnabled">
+             <button @click="logout" class="logout-btn" title="Sign Out">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                <span class="btn-text">Sign Out</span>
+            </button>
+        </div>
+        <div class="footer-row info-row" :class="{ 'with-separator': configStore.authEnabled }">
+             <a href="https://github.com/fussraider/selectel-craas-ui" target="_blank" rel="noopener noreferrer" class="github-link" title="GitHub Project">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                </svg>
+            </a>
+             <span class="app-version" v-if="version">{{ version }}</span>
+        </div>
     </div>
   </aside>
 </template>
@@ -84,6 +94,8 @@ const store = useRegistryStore()
 const configStore = useConfigStore()
 const authStore = useAuthStore()
 const router = useRouter()
+
+const version = import.meta.env.VITE_APP_VERSION || ''
 
 const refresh = async () => {
     await store.refreshStructure()
@@ -275,25 +287,74 @@ const logout = () => {
 }
 
 .sidebar-footer {
-    padding: 1rem;
+    padding: 0.75rem;
     border-top: 1px solid $border-color;
     margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.footer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.info-row {
+    justify-content: flex-start;
+    gap: 0.5rem;
+}
+
+.info-row.with-separator {
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba($border-color, 0.3);
+}
+
+.app-version {
+    font-size: 0.7rem;
+    color: $secondary-color;
+    font-family: monospace;
+    opacity: 0.6;
+    margin-left: auto;
+}
+
+.github-link {
+    color: $secondary-color;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 50%;
+    opacity: 0.6;
+
+    &:hover {
+        color: $text-color;
+        opacity: 1;
+    }
+
+    svg {
+        width: 14px;
+        height: 14px;
+    }
 }
 
 .logout-btn {
-    width: 100%;
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.75rem;
+    padding: 0.5rem;
     background-color: transparent;
     border: 1px solid $border-color;
     color: $text-color;
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
 
     &:hover {
         background-color: rgba($danger-color, 0.1);
@@ -302,8 +363,8 @@ const logout = () => {
     }
 
     svg {
-        width: 18px;
-        height: 18px;
+        width: 14px;
+        height: 14px;
     }
 }
 </style>

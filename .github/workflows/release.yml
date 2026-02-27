@@ -35,8 +35,17 @@ jobs:
       - name: Run tests
         run: go test -v ./...
 
+      - name: Calculate Version
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          else
+            echo "VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          fi
+
       - name: Build static binary
-        run: CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o server ./cmd/server
+        run: CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.Version=${{ env.VERSION }}" -o server ./cmd/server
 
       - name: Install UPX
         run: sudo apt-get update && sudo apt-get install -y upx
@@ -112,8 +121,17 @@ jobs:
       - name: Type check
         run: pnpm type-check
 
+      - name: Calculate Version
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          else
+            echo "VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          fi
+
       - name: Build application
-        run: pnpm build
+        run: VITE_APP_VERSION=${{ env.VERSION }} pnpm build
 
       - name: Archive dist
         # Changed from zip to tar for consistency with backend
