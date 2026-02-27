@@ -60,7 +60,7 @@ func Load() (*Config, error) {
 		EnableDeleteRegistry:   getEnvBool("ENABLE_DELETE_REGISTRY", false),
 		EnableDeleteRepository: getEnvBool("ENABLE_DELETE_REPOSITORY", false),
 		EnableDeleteImage:      getEnvBool("ENABLE_DELETE_IMAGE", false),
-		EnableMissingTagsCheck: getEnvBool("ENABLE_MISSING_TAGS_CHECK", true),
+		EnableMissingTagsCheck: getEnvBool("ENABLE_MISSING_TAGS_CHECK", false),
 
 		ProtectedTags: getEnvSlice("PROTECTED_TAGS", nil),
 
