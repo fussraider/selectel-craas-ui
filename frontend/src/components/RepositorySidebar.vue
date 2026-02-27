@@ -55,7 +55,13 @@
         </div>
       </div>
 
-      <div v-if="store.registries.length === 0 && !store.loading" class="empty-state">
+      <div v-if="store.error && store.registries.length === 0" class="error-container-sidebar">
+          <ErrorState
+            title="Failed to load registries."
+            :retry="refresh"
+          />
+      </div>
+      <div v-else-if="store.registries.length === 0 && !store.loading" class="empty-state">
           No registries found.
       </div>
     </div>
@@ -79,6 +85,7 @@ import { useConfigStore } from '@/stores/config'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import RepositoryTree from './RepositoryTree.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
 const store = useRegistryStore()
 const configStore = useConfigStore()
@@ -219,6 +226,10 @@ const logout = () => {
     padding: 2rem;
     text-align: center;
     color: $secondary-color;
+}
+
+.error-container-sidebar {
+    padding: 1rem;
 }
 
 // Loading Skeletons
