@@ -14,8 +14,9 @@
       <p class="hint" v-else-if="store.selectedProjectId">Current Project: {{ store.selectedProjectId }}</p>
 
       <!-- Toast Notifications for HomeView -->
+      <!-- Only show toast if we are NOT showing the full-page error state -->
       <ToastNotification
-        v-if="store.error"
+        v-if="store.error && !(!store.loading && !store.selectedProjectId)"
         type="error"
         :message="store.error"
         @close="store.clearNotifications"

@@ -13,7 +13,8 @@ def test_home_error_handling(page: Page):
 
     # Check for error container in HomeView
     # Refactored to use ErrorState component with class .error-state
-    error_container = page.locator(".error-state")
+    # We target the one inside the welcome-content specifically to avoid ambiguity with sidebar
+    error_container = page.locator(".welcome-content .error-state")
     expect(error_container).to_be_visible(timeout=5000)
     expect(error_container).to_contain_text("Failed to load projects.")
 

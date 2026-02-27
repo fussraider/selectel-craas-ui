@@ -5,8 +5,18 @@
     </div>
 
     <!-- Toast Notifications -->
+    <!-- Only show toast if we have partial data (registry exists) but maybe GC info failed,
+         OR if we are in a state where the main error block isn't replacing content entirely.
+         Actually, the main error block replaces content in Info Card or GC Card.
+         If Info Card fails, we show inline error there. We should suppress Toast for that?
+         If GC Card fails, we show inline error there.
+         It's complex because we have multiple inline error slots.
+         If ANY inline error is shown, we might still want Toast for OTHER errors?
+         But store.error is singular.
+         If store.error matches the inline error condition, suppress toast.
+    -->
     <ToastNotification
-      v-if="store.error"
+      v-if="store.error && registry"
       type="error"
       :message="store.error"
       @close="store.clearNotifications"

@@ -41,8 +41,9 @@
     </div>
 
     <!-- Toast Notifications -->
+    <!-- Only show toast if we are NOT showing the full-page error state -->
     <ToastNotification
-      v-if="store.error"
+      v-if="store.error && (store.imagesLoading || filteredImages.length > 0)"
       type="error"
       :message="store.error"
       @close="store.clearNotifications"
