@@ -23,21 +23,21 @@ func TestLogin(t *testing.T) {
 		jwtSecret      string
 		requestBody    interface{}
 		expectedStatus int
-		expectToken    bool
+		expectCookie   bool
 	}{
 		{
 			name:           "Auth Disabled",
 			authEnabled:    false,
 			requestBody:    LoginRequest{Login: "user", Password: "password"},
 			expectedStatus: http.StatusBadRequest,
-			expectToken:    false,
+			expectCookie:   false,
 		},
 		{
 			name:           "Invalid JSON",
 			authEnabled:    true,
 			requestBody:    "invalid-json",
 			expectedStatus: http.StatusBadRequest,
-			expectToken:    false,
+			expectCookie:   false,
 		},
 		{
 			name:           "Invalid Credentials",
@@ -46,7 +46,7 @@ func TestLogin(t *testing.T) {
 			authPassword:   "password",
 			requestBody:    LoginRequest{Login: "admin", Password: "wrong-password"},
 			expectedStatus: http.StatusUnauthorized,
-			expectToken:    false,
+			expectCookie:   false,
 		},
 		{
 			name:           "Successful Login",
@@ -56,7 +56,7 @@ func TestLogin(t *testing.T) {
 			jwtSecret:      "secret",
 			requestBody:    LoginRequest{Login: "admin", Password: "password"},
 			expectedStatus: http.StatusOK,
-			expectToken:    true,
+			expectCookie:   true,
 		},
 	}
 
@@ -89,16 +89,64 @@ func TestLogin(t *testing.T) {
 				t.Errorf("expected status %d, got %d", tt.expectedStatus, rr.Code)
 			}
 
-			if tt.expectToken {
+			if tt.expectCookie {
 				var resp LoginResponse
 				if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 					t.Fatalf("failed to decode response: %v", err)
 				}
-				if resp.Token == "" {
-					t.Error("expected token, got empty string")
+				if resp.User == "" {
+					t.Error("expected user, got empty string")
+				}
+
+				cookies := rr.Result().Cookies()
+				found := false
+				for _, cookie := range cookies {
+					if cookie.Name == "auth_token" {
+						found = true
+						if cookie.Value == "" {
+							t.Error("expected auth_token value, got empty string")
+						}
+						if !cookie.HttpOnly {
+							t.Error("expected HttpOnly cookie")
+						}
+						if !cookie.Secure {
+							t.Error("expected Secure cookie")
+						}
+						break
+					}
+				}
+				if !found {
+					t.Error("expected auth_token cookie not found")
 				}
 			}
 		})
+	}
+}
+
+func TestLogout(t *testing.T) {
+	server := &Server{}
+	req := httptest.NewRequest("POST", "/api/logout", nil)
+	rr := httptest.NewRecorder()
+
+	server.Logout(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rr.Code)
+	}
+
+	cookies := rr.Result().Cookies()
+	found := false
+	for _, cookie := range cookies {
+		if cookie.Name == "auth_token" {
+			found = true
+			if cookie.MaxAge != -1 {
+				t.Errorf("expected MaxAge -1, got %d", cookie.MaxAge)
+			}
+			break
+		}
+	}
+	if !found {
+		t.Error("expected auth_token cookie to be cleared")
 	}
 }
 

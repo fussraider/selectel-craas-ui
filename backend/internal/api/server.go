@@ -36,6 +36,7 @@ func New(auth *auth.Client, craas *craas.Service, logger *slog.Logger, cfg *conf
 	// Public routes
 	r.Get("/api/config", s.GetConfig)
 	r.With(s.RateLimiter.RateLimit).Post("/api/login", s.Login)
+	r.Post("/api/logout", s.Logout)
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
