@@ -104,6 +104,13 @@ export const useRegistryStore = defineStore('registry', () => {
   const refreshStructure = async () => {
       if (selectedProjectId.value) {
           await loadProjectData(selectedProjectId.value)
+      } else {
+          // If no project selected (e.g. initial fetch failed), retry fetching projects
+          await fetchProjects()
+          // If fetchProjects succeeded and auto-selected a project, load its data
+          if (selectedProjectId.value) {
+              await loadProjectData(selectedProjectId.value)
+          }
       }
   }
 
