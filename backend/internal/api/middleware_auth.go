@@ -18,19 +18,28 @@ func (s *Server) AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
+		var tokenString string
+
+		// First try to get token from cookie
+		if cookie, err := r.Cookie("auth_token"); err == nil {
+			tokenString = cookie.Value
+		}
+
+		// Fallback to Authorization header
+		if tokenString == "" {
+			authHeader := r.Header.Get("Authorization")
+			if authHeader != "" {
+				parts := strings.Split(authHeader, " ")
+				if len(parts) == 2 && parts[0] == "Bearer" {
+					tokenString = parts[1]
+				}
+			}
+		}
+
+		if tokenString == "" {
 			RespondError(w, http.StatusUnauthorized, ErrUnauthorized)
 			return
 		}
-
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			RespondError(w, http.StatusUnauthorized, errors.New("invalid authorization header"))
-			return
-		}
-
-		tokenString := parts[1]
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, errors.New("unexpected signing method")

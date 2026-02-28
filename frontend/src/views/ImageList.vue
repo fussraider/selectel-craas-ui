@@ -41,9 +41,8 @@
     </div>
 
     <!-- Toast Notifications -->
-    <!-- Only show toast if we are NOT showing the full-page error state -->
     <ToastNotification
-      v-if="store.error && (store.imagesLoading || filteredImages.length > 0)"
+      v-if="store.error"
       type="error"
       :message="store.error"
       @close="store.clearNotifications"
@@ -78,14 +77,8 @@
          </span>
       </div>
 
-      <ErrorState
-        v-if="store.error && !store.imagesLoading"
-        title="Failed to load images."
-        :retry="fetchData"
-      />
-      <div v-else-if="filteredImages.length === 0 && !store.imagesLoading" class="empty-state">No images found.</div>
+      <div v-if="filteredImages.length === 0 && !store.imagesLoading" class="empty-state">No images found.</div>
       <div
-        v-else
         v-for="image in filteredImages"
         :key="image.digest"
         class="list-item"
@@ -222,7 +215,6 @@ import { onMounted, onUnmounted, computed, ref, watch, useTemplateRef } from 'vu
 import { useRoute, useRouter } from 'vue-router'
 import ToastNotification from '@/components/ToastNotification.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
-import ErrorState from '@/components/ErrorState.vue'
 import { useConfirmModal } from '@/composables/useConfirmModal'
 
 const router = useRouter()
@@ -261,14 +253,18 @@ const {
   closeModal
 } = useConfirmModal(rname, selectedImagesCount)
 
-const filteredImages = computed(() => {
-    const images = store.images.slice().sort((a, b) => {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+const sortedImages = computed(() => {
+    return store.images.slice().sort((a, b) => {
+        if (b.createdAt > a.createdAt) return 1
+        if (b.createdAt < a.createdAt) return -1
+        return 0
     })
+})
 
-    if (!searchQuery.value) return images
+const filteredImages = computed(() => {
+    if (!searchQuery.value) return sortedImages.value
     const query = searchQuery.value.toLowerCase()
-    return images.filter(img =>
+    return sortedImages.value.filter(img =>
         img.tags && img.tags.some(tag => tag.toLowerCase().includes(query))
     )
 })
@@ -654,7 +650,6 @@ const copyToClipboard = (text: string, id: string) => {
     border: 1px dashed $border-color;
     border-radius: 8px;
 }
-
 
 .list-controls {
     display: flex;

@@ -5,18 +5,8 @@
     </div>
 
     <!-- Toast Notifications -->
-    <!-- Only show toast if we have partial data (registry exists) but maybe GC info failed,
-         OR if we are in a state where the main error block isn't replacing content entirely.
-         Actually, the main error block replaces content in Info Card or GC Card.
-         If Info Card fails, we show inline error there. We should suppress Toast for that?
-         If GC Card fails, we show inline error there.
-         It's complex because we have multiple inline error slots.
-         If ANY inline error is shown, we might still want Toast for OTHER errors?
-         But store.error is singular.
-         If store.error matches the inline error condition, suppress toast.
-    -->
     <ToastNotification
-      v-if="store.error && registry"
+      v-if="store.error"
       type="error"
       :message="store.error"
       @close="store.clearNotifications"
@@ -30,12 +20,7 @@
 
     <div class="card info-card">
         <h3>Registry Information</h3>
-        <ErrorState
-            v-if="store.error"
-            title="Failed to load registry info."
-            :retry="fetchData"
-        />
-        <div v-else class="info-grid">
+        <div class="info-grid">
             <div class="info-item">
                 <span class="label">ID:</span>
                 <span class="value">{{ rid }}</span>
@@ -67,10 +52,6 @@
         </p>
 
         <div v-if="store.gcLoading" class="loading">Loading GC info...</div>
-        <ErrorState
-            v-else-if="store.error && !store.gcInfo"
-            title="Failed to load GC info."
-        />
         <div v-else-if="store.gcInfo" class="gc-stats">
             <div class="stat">
                 <span class="stat-label">Potential Savings</span>
@@ -128,7 +109,6 @@ import { onMounted, computed, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import ToastNotification from '@/components/ToastNotification.vue'
-import ErrorState from '@/components/ErrorState.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -174,7 +154,6 @@ const confirmDelete = async () => {
 </script>
 
 <style scoped lang="scss">
-@use "sass:color";
 @use '@/assets/main.scss' as *;
 
 .registry-settings {
@@ -327,6 +306,13 @@ const confirmDelete = async () => {
     }
 }
 
+.error-msg {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: rgba($danger-color, 0.1);
+    color: $danger-color;
+    border-radius: 4px;
+}
 
 .success-msg {
     padding: 1rem;

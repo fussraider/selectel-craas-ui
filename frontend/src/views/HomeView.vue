@@ -3,20 +3,12 @@
     <div class="welcome-content">
       <h1>Welcome to CRaaS Console</h1>
       <p>Select a repository from the sidebar to view images.</p>
-
-      <ErrorState
-        v-if="store.error"
-        title="Failed to load projects."
-        :retry="store.fetchProjects"
-      />
-
-      <p class="hint" v-else-if="store.loading">Loading projects...</p>
-      <p class="hint" v-else-if="store.selectedProjectId">Current Project: {{ store.selectedProjectId }}</p>
+      <p class="hint" v-if="!store.selectedProjectId">Loading projects...</p>
+      <p class="hint" v-else>Current Project: {{ store.selectedProjectId }}</p>
 
       <!-- Toast Notifications for HomeView -->
-      <!-- Only show toast if we are NOT showing the full-page error state -->
       <ToastNotification
-        v-if="store.error && !(!store.loading && !store.selectedProjectId)"
+        v-if="store.error"
         type="error"
         :message="store.error"
         @close="store.clearNotifications"
@@ -28,12 +20,10 @@
 <script setup lang="ts">
 import { useRegistryStore } from '@/stores/registry'
 import ToastNotification from '@/components/ToastNotification.vue'
-import ErrorState from '@/components/ErrorState.vue'
 const store = useRegistryStore()
 </script>
 
 <style scoped lang="scss">
-@use "sass:color";
 @use '@/assets/main.scss' as *;
 
 .home-view {
@@ -54,5 +44,4 @@ const store = useRegistryStore()
     p { color: $text-color; font-size: 1.1rem; }
     .hint { color: $secondary-color; font-size: 0.9rem; margin-top: 1rem; }
 }
-
 </style>

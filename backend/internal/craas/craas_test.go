@@ -69,12 +69,7 @@ func TestListImages(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	// We need missing tags check enabled to pass this test logic
-	svc := &Service{
-		endpoint:               ts.URL + "/v1",
-		logger:                 testLogger,
-		enableMissingTagsCheck: true,
-	}
+	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
 	images, err := svc.ListImages(context.Background(), "fake-token", "reg1", "repo1")
 
 	assert.NoError(t, err)
@@ -175,12 +170,7 @@ func TestListImages_MissingTags(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	// We need missing tags check enabled to pass this test logic
-	svc := &Service{
-		endpoint:               ts.URL + "/v1",
-		logger:                 testLogger,
-		enableMissingTagsCheck: true,
-	}
+	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
 	images, err := svc.ListImages(context.Background(), "fake-token", "reg1", "repo1")
 
 	assert.NoError(t, err)
@@ -244,5 +234,32 @@ func TestCleanupRepository(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Len(t, result.Deleted, 1)
+	assert.Equal(t, "sha256:abc", result.Deleted[0].Digest)
 	assert.Len(t, result.Failed, 0)
+}
+
+func TestCleanupRepository_WithFailed(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.RequestURI, "group%2Frepo/cleanup") {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{
+				"deleted": [],
+				"failed": [{"digest": "sha256:fail", "tags": ["latest"], "error": "something went wrong"}]
+			}`))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
+	result, err := svc.CleanupRepository(context.Background(), "fake-token", "reg1", "group/repo", []string{"sha256:fail"}, false)
+
+	assert.NoError(t, err)
+	assert.Len(t, result.Deleted, 0)
+	assert.Len(t, result.Failed, 1)
+	assert.Equal(t, "sha256:fail", result.Failed[0].Digest)
+	assert.Equal(t, "something went wrong", result.Failed[0].Error)
+	assert.Contains(t, result.Failed[0].Tags, "latest")
 }

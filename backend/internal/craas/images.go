@@ -28,28 +28,19 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 	encodedRepoName := url.PathEscape(repoName)
 
 	start := time.Now()
-	// Revert to using the standard repository.ListImages
 	images, _, err := repository.ListImages(ctx, client, registryID, encodedRepoName)
+	duration := time.Since(start)
 
 	if err != nil {
 		s.logger.Error("failed to list images", "registry_id", registryID, "repository", repoName, "error", err)
 		return nil, err
 	}
 
-	if s.enableMissingTagsCheck {
-		images = s.resolveMissingTags(ctx, client, token, registryID, encodedRepoName, images)
-	}
-
-	s.logger.Info("listed images", "registry_id", registryID, "repository", repoName, "count", len(images), "duration", time.Since(start))
-	return images, nil
-}
-
-func (s *Service) resolveMissingTags(ctx context.Context, client *clientv1.ServiceClient, token, registryID, encodedRepoName string, images []*repository.Image) []*repository.Image {
 	// Fetch all tags to check for missing ones
 	allTags, _, err := repository.ListTags(ctx, client, registryID, encodedRepoName)
 	if err != nil {
-		s.logger.Warn("failed to list tags for verification", "registry_id", registryID, "repository", encodedRepoName, "error", err)
-		return images
+		s.logger.Warn("failed to list tags for verification", "registry_id", registryID, "repository", repoName, "error", err)
+		return images, nil
 	}
 
 	// Create a map of existing images by digest
@@ -73,7 +64,6 @@ func (s *Service) resolveMissingTags(ctx context.Context, client *clientv1.Servi
 	if len(missingTags) > 0 {
 		s.logger.Info("found missing tags, resolving", "count", len(missingTags), "tags", missingTags)
 
-		// Create a separate http client for fetching digests manually (needs custom headers)
 		httpClient := &http.Client{
 			Timeout: 10 * time.Second,
 		}
@@ -131,7 +121,9 @@ func (s *Service) resolveMissingTags(ctx context.Context, client *clientv1.Servi
 			s.logger.Error("error resolving missing tags", "error", err)
 		}
 	}
-	return images
+
+	s.logger.Info("listed images", "registry_id", registryID, "repository", repoName, "count", len(images), "duration", duration)
+	return images, nil
 }
 
 // fetchImageDigests fetches the digest(s) associated with a tag.

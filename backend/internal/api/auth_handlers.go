@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -15,7 +16,7 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Token string `json:"token"`
+	User string `json:"user"`
 }
 
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +31,10 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Login != s.Config.AuthLogin || req.Password != s.Config.AuthPassword {
+	loginMatch := subtle.ConstantTimeCompare([]byte(req.Login), []byte(s.Config.AuthLogin))
+	passMatch := subtle.ConstantTimeCompare([]byte(req.Password), []byte(s.Config.AuthPassword))
+
+	if loginMatch&passMatch != 1 {
 		RespondError(w, http.StatusUnauthorized, errors.New("invalid credentials"))
 		return
 	}
@@ -47,7 +51,30 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RespondJSON(w, http.StatusOK, LoginResponse{Token: tokenString})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth_token",
+		Value:    tokenString,
+		Path:     "/",
+		Expires:  time.Now().Add(24 * time.Hour),
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	RespondJSON(w, http.StatusOK, LoginResponse{User: req.Login})
+}
+
+func (s *Server) Logout(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *Server) AuthCheck(w http.ResponseWriter, r *http.Request) {

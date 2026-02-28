@@ -3,26 +3,28 @@ package api
 import (
 	"log/slog"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/generic/selectel-craas-web/internal/auth"
 	"github.com/generic/selectel-craas-web/internal/config"
 	"github.com/generic/selectel-craas-web/internal/craas"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type Server struct {
-	Auth   *auth.Client
-	Craas  *craas.Service
-	Logger *slog.Logger
-	Config *config.Config
+	Auth        *auth.Client
+	Craas       *craas.Service
+	Logger      *slog.Logger
+	Config      *config.Config
+	RateLimiter *RateLimiter
 }
 
 func New(auth *auth.Client, craas *craas.Service, logger *slog.Logger, cfg *config.Config) *chi.Mux {
 	s := &Server{
-		Auth:   auth,
-		Craas:  craas,
-		Logger: logger.With("service", "api"),
-		Config: cfg,
+		Auth:        auth,
+		Craas:       craas,
+		Logger:      logger.With("service", "api"),
+		Config:      cfg,
+		RateLimiter: NewRateLimiter(),
 	}
 
 	r := chi.NewRouter()
@@ -33,7 +35,8 @@ func New(auth *auth.Client, craas *craas.Service, logger *slog.Logger, cfg *conf
 
 	// Public routes
 	r.Get("/api/config", s.GetConfig)
-	r.Post("/api/login", s.Login)
+	r.With(s.RateLimiter.RateLimit).Post("/api/login", s.Login)
+	r.Post("/api/logout", s.Logout)
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
