@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"log"
 	"os"
 	"strconv"
@@ -44,6 +46,16 @@ func Load() (*Config, error) {
 		log.Println("No .env file found, relying on environment variables")
 	}
 
+	jwtSecret := getEnv("JWT_SECRET", "")
+	if jwtSecret == "" {
+		b := make([]byte, 32)
+		if _, err := rand.Read(b); err != nil {
+			log.Fatalf("Failed to generate random JWT secret: %v", err)
+		}
+		jwtSecret = hex.EncodeToString(b)
+		log.Println("JWT_SECRET not provided, generated a random secure secret for this session")
+	}
+
 	return &Config{
 		WebPort:             getEnv("WEB_PORT", "8080"),
 		SelectelUsername:    getEnv("SELECTEL_USERNAME", ""),
@@ -65,7 +77,7 @@ func Load() (*Config, error) {
 		AuthEnabled:  getEnvBool("AUTH_ENABLED", false),
 		AuthLogin:    getEnv("AUTH_LOGIN", ""),
 		AuthPassword: getEnv("AUTH_PASSWORD", ""),
-		JWTSecret:    getEnv("JWT_SECRET", ""),
+		JWTSecret:    jwtSecret,
 
 		CORSAllowedOrigin: getEnv("CORS_ALLOWED_ORIGIN", ""),
 	}, nil
