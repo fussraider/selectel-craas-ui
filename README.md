@@ -77,12 +77,13 @@ You can protect the web interface with Basic Authentication to restrict access.
 
 Control which operations are permitted and protect critical resources.
 
-| Variable                   | Description                                         | Default |
-|:---------------------------|:----------------------------------------------------|:--------|
-| `ENABLE_DELETE_REGISTRY`   | Allow deletion of entire registries                 | `false` |
-| `ENABLE_DELETE_REPOSITORY` | Allow deletion of repositories                      | `false` |
-| `ENABLE_DELETE_IMAGE`      | Allow deletion of images (single or bulk)           | `false` |
-| `PROTECTED_TAGS`           | Comma-separated list of tags that cannot be deleted | (empty) |
+| Variable                    | Description                                         | Default |
+|:----------------------------|:----------------------------------------------------|:--------|
+| `ENABLE_DELETE_REGISTRY`    | Allow deletion of entire registries                 | `false` |
+| `ENABLE_DELETE_REPOSITORY`  | Allow deletion of repositories                      | `false` |
+| `ENABLE_DELETE_IMAGE`       | Allow deletion of images (single or bulk)           | `false` |
+| `ENABLE_MISSING_TAGS_CHECK` | Resolve and display tags not returned by listing    | `false` |
+| `PROTECTED_TAGS`            | Comma-separated list of tags that cannot be deleted | (empty) |
 
 ### Logging
 

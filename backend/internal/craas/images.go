@@ -36,11 +36,20 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 		return nil, err
 	}
 
+	if s.enableMissingTagsCheck {
+		images = s.resolveMissingTags(ctx, client, token, registryID, repoName, encodedRepoName, images)
+	}
+
+	s.logger.Info("listed images", "registry_id", registryID, "repository", repoName, "count", len(images), "duration", duration)
+	return images, nil
+}
+
+func (s *Service) resolveMissingTags(ctx context.Context, client *clientv1.ServiceClient, token, registryID, repoName, encodedRepoName string, images []*repository.Image) []*repository.Image {
 	// Fetch all tags to check for missing ones
 	allTags, _, err := repository.ListTags(ctx, client, registryID, encodedRepoName)
 	if err != nil {
 		s.logger.Warn("failed to list tags for verification", "registry_id", registryID, "repository", repoName, "error", err)
-		return images, nil
+		return images
 	}
 
 	// Create a map of existing images by digest
@@ -61,69 +70,70 @@ func (s *Service) ListImages(ctx context.Context, token string, registryID, repo
 		}
 	}
 
-	if len(missingTags) > 0 {
-		s.logger.Info("found missing tags, resolving", "count", len(missingTags), "tags", missingTags)
-
-		httpClient := &http.Client{
-			Timeout: 10 * time.Second,
-		}
-
-		g, ctx := errgroup.WithContext(ctx)
-		g.SetLimit(5) // Limit concurrency
-
-		var mu sync.Mutex
-
-		for _, tag := range missingTags {
-			tag := tag
-			g.Go(func() error {
-				// Fetch all digests associated with the tag
-				// Use encodedRepoName here too
-				digests, err := s.fetchImageDigests(ctx, httpClient, token, registryID, encodedRepoName, tag)
-				if err != nil {
-					s.logger.Warn("failed to fetch digests for tag", "tag", tag, "error", err)
-					return nil // Don't fail the whole group, just skip
-				}
-
-				mu.Lock()
-				defer mu.Unlock()
-
-				for _, digest := range digests {
-					// Check if we already have this image (by digest)
-					if existingImg, ok := imageMap[digest]; ok {
-						// Add the tag to the existing image
-						exists := false
-						for _, t := range existingImg.Tags {
-							if t == tag {
-								exists = true
-								break
-							}
-						}
-						if !exists {
-							existingImg.Tags = append(existingImg.Tags, tag)
-						}
-					} else {
-						// New image found with this digest.
-						// We create a minimal entry for it.
-						newImg := &repository.Image{
-							Digest:    digest,
-							Tags:      []string{tag},
-							CreatedAt: time.Now(), // Unknown
-						}
-						images = append(images, newImg)
-						imageMap[digest] = newImg
-					}
-				}
-				return nil
-			})
-		}
-		// Wait for all goroutines to finish
-		if err := g.Wait(); err != nil {
-			s.logger.Error("error resolving missing tags", "error", err)
-		}
+	if len(missingTags) == 0 {
+		return images
 	}
 
-	s.logger.Info("listed images", "registry_id", registryID, "repository", repoName, "count", len(images), "duration", duration)
-	return images, nil
+	s.logger.Info("found missing tags, resolving", "count", len(missingTags), "tags", missingTags)
+
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(5) // Limit concurrency
+
+	var mu sync.Mutex
+
+	for _, tag := range missingTags {
+		tag := tag
+		g.Go(func() error {
+			// Fetch all digests associated with the tag
+			// Use encodedRepoName here too
+			digests, err := s.fetchImageDigests(ctx, httpClient, token, registryID, encodedRepoName, tag)
+			if err != nil {
+				s.logger.Warn("failed to fetch digests for tag", "tag", tag, "error", err)
+				return nil // Don't fail the whole group, just skip
+			}
+
+			mu.Lock()
+			defer mu.Unlock()
+
+			for _, digest := range digests {
+				// Check if we already have this image (by digest)
+				if existingImg, ok := imageMap[digest]; ok {
+					// Add the tag to the existing image
+					exists := false
+					for _, t := range existingImg.Tags {
+						if t == tag {
+							exists = true
+							break
+						}
+					}
+					if !exists {
+						existingImg.Tags = append(existingImg.Tags, tag)
+					}
+				} else {
+					// New image found with this digest.
+					// We create a minimal entry for it.
+					newImg := &repository.Image{
+						Digest:    digest,
+						Tags:      []string{tag},
+						CreatedAt: time.Now(), // Unknown
+					}
+					images = append(images, newImg)
+					imageMap[digest] = newImg
+				}
+			}
+			return nil
+		})
+	}
+	// Wait for all goroutines to finish
+	if err := g.Wait(); err != nil {
+		s.logger.Error("error resolving missing tags", "error", err)
+	}
+
+	return images
 }
 
 // fetchImageDigests fetches the digest(s) associated with a tag.
