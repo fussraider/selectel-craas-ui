@@ -7,8 +7,6 @@ const client = axios.create({
   }
 })
 
-import { useNotificationStore } from '@/stores/notifications'
-
 client.interceptors.response.use(
   response => response,
   error => {
@@ -24,12 +22,14 @@ client.interceptors.response.use(
 
     // We only want to show notification if not cancelled manually by axios
     if (!axios.isCancel(error)) {
-      try {
-        const notifications = useNotificationStore()
-        notifications.addNotification(formatError(error), 'error')
-      } catch (e) {
-        // Fallback or ignore if store is not available
-        console.error('Failed to add error notification:', e)
+      // Dispatch globally so that ToastContainer can pick it up without Pinia injection issues
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('app-notify', {
+          detail: {
+            message: formatError(error),
+            type: 'error'
+          }
+        }))
       }
     }
 
@@ -41,7 +41,13 @@ client.interceptors.response.use(
 export const formatError = (err: unknown): string => {
   if (axios.isAxiosError(err)) {
     const data = err.response?.data
-    if (typeof data === 'string') return data
+    if (typeof data === 'string') {
+        // Avoid returning huge HTML pages from proxies or bad gateways
+        if (data.trim().startsWith('<')) {
+            return `Server error: ${err.message}`
+        }
+        return data
+    }
     if (data && typeof data === 'object' && 'error' in data) {
       return String((data as { error: unknown }).error)
     }

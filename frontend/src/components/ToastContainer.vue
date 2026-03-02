@@ -1,6 +1,6 @@
 <template>
   <div class="toast-container" aria-live="polite">
-    <TransitionGroup name="toast-list">
+    <TransitionGroup name="toast-list" appear>
       <ToastNotification
         v-for="notification in store.notifications"
         :key="notification.id"
@@ -13,10 +13,26 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue'
 import { useNotificationStore } from '@/stores/notifications'
 import ToastNotification from './ToastNotification.vue'
 
 const store = useNotificationStore()
+
+const handleNotify = (e: Event) => {
+  const customEvent = e as CustomEvent<{ message: string; type: 'success' | 'error' | 'info' }>
+  if (customEvent.detail) {
+    store.addNotification(customEvent.detail.message, customEvent.detail.type)
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('app-notify', handleNotify)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('app-notify', handleNotify)
+})
 </script>
 
 <style scoped lang="scss">

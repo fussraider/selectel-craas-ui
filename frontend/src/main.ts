@@ -14,17 +14,20 @@ const pinia = createPinia()
 app.use(pinia)
 
 const configStore = useConfigStore()
-await configStore.fetchConfig()
 
-if (configStore.authEnabled) {
-  const authStore = useAuthStore()
-  try {
-    await authStore.checkAuth()
-  } catch {
-    // ignore
-  }
-}
+// We must catch errors, but we also want the app to mount immediately so it can show them.
+// By not awaiting these sequentially before mount, the UI can render its loading states
+// and toast containers can catch the errors fired.
 
 app.use(router)
-
 app.mount('#app')
+
+// Now run the fetching so that any CustomEvent dispatched by axios is caught by ToastContainer
+configStore.fetchConfig().finally(() => {
+  if (configStore.authEnabled) {
+    const authStore = useAuthStore()
+    authStore.checkAuth().catch(() => {
+      // ignore
+    })
+  }
+})
