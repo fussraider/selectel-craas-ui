@@ -15,6 +15,16 @@ Object.defineProperty(window, 'location', {
   writable: true
 })
 
+interface MockAxiosError extends Error {
+  isAxiosError: boolean
+  response?: {
+    status: number
+    data?: unknown
+  }
+}
+
+type InterceptorHandlers = { handlers: Array<{ rejected: (error: unknown) => Promise<never> }> }
+
 describe('API Client Interceptor', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -28,12 +38,12 @@ describe('API Client Interceptor', () => {
     localStorage.setItem('auth_user', 'testuser')
 
     // Create a mock error response
-    const error = new Error('Unauthorized') as any
+    const error = new Error('Unauthorized') as MockAxiosError
     error.isAxiosError = true
     error.response = { status: 401 }
 
     // Get the interceptor function
-    const rejectInterceptor = (client.interceptors.response as any).handlers[0].rejected
+    const rejectInterceptor = (client.interceptors.response as unknown as InterceptorHandlers).handlers[0].rejected
 
     // Spy on notification store
     const notificationStore = useNotificationStore()
@@ -51,11 +61,11 @@ describe('API Client Interceptor', () => {
   })
 
   it('adds an error notification for non-401 errors', async () => {
-    const error = new Error('Server Error') as any
+    const error = new Error('Server Error') as MockAxiosError
     error.isAxiosError = true
     error.response = { status: 500, data: 'Internal Server Error' }
 
-    const rejectInterceptor = (client.interceptors.response as any).handlers[0].rejected
+    const rejectInterceptor = (client.interceptors.response as unknown as InterceptorHandlers).handlers[0].rejected
 
     const notificationStore = useNotificationStore()
     const addNotificationSpy = vi.spyOn(notificationStore, 'addNotification')
@@ -67,14 +77,14 @@ describe('API Client Interceptor', () => {
   })
 
   it('does not add notification if error was manually cancelled', async () => {
-    const error = new Error('Cancelled') as any
+    const error = new Error('Cancelled') as MockAxiosError
     error.isAxiosError = true
     error.response = { status: 500 }
 
     // Mock axios.isCancel to return true
     vi.spyOn(axios, 'isCancel').mockReturnValue(true)
 
-    const rejectInterceptor = (client.interceptors.response as any).handlers[0].rejected
+    const rejectInterceptor = (client.interceptors.response as unknown as InterceptorHandlers).handlers[0].rejected
 
     const notificationStore = useNotificationStore()
     const addNotificationSpy = vi.spyOn(notificationStore, 'addNotification')
