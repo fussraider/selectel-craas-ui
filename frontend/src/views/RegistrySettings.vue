@@ -4,19 +4,7 @@
       <h1>Registry Settings: {{ rid }}</h1>
     </div>
 
-    <!-- Toast Notifications -->
-    <ToastNotification
-      v-if="store.error"
-      type="error"
-      :message="store.error"
-      @close="store.clearNotifications"
-    />
-    <ToastNotification
-      v-if="store.success"
-      type="success"
-      :message="store.success"
-      @close="store.clearNotifications"
-    />
+    <ErrorState :error="store.error" />
 
     <div class="card info-card">
         <h3>Registry Information</h3>
@@ -108,7 +96,7 @@ import { useConfigStore } from '@/stores/config'
 import { onMounted, computed, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ConfirmModal from '@/components/ConfirmModal.vue'
-import ToastNotification from '@/components/ToastNotification.vue'
+import ErrorState from '@/components/ErrorState.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -304,14 +292,6 @@ const confirmDelete = async () => {
         background-color: $danger-color;
         color: white;
     }
-}
-
-.error-msg {
-    padding: 1rem;
-    margin-bottom: 1rem;
-    background-color: rgba($danger-color, 0.1);
-    color: $danger-color;
-    border-radius: 4px;
 }
 
 .success-msg {

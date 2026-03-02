@@ -9,44 +9,21 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
-
-const props = withDefaults(defineProps<{
+defineProps<{
   message: string | null
-  type: 'success' | 'error'
-  duration?: number
-}>(), {
-  duration: 3000
-})
-
-const emit = defineEmits<{
-  (e: 'close'): void
+  type: 'success' | 'error' | 'info'
 }>()
 
-let timer: number | undefined
-
-onMounted(() => {
-  if (props.duration > 0) {
-    timer = window.setTimeout(() => {
-      emit('close')
-    }, props.duration)
-  }
-})
-
-onUnmounted(() => {
-  if (timer) {
-    clearTimeout(timer)
-  }
-})
+defineEmits<{
+  (e: 'close'): void
+}>()
 </script>
 
 <style scoped lang="scss">
 @use '@/assets/main.scss' as *;
 
 .toast {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
+  /* Removed fixed positioning, as ToastContainer handles layout */
   background-color: $card-bg;
   color: $text-color;
   padding: 1rem 1.5rem;
@@ -59,8 +36,8 @@ onUnmounted(() => {
   gap: 1rem;
   min-width: 300px;
   max-width: 90vw;
-  animation: slideIn 0.3s ease-out;
   border: 1px solid $border-color;
+  pointer-events: auto; /* Ensure clicks work since container ignores them */
 
   &.success {
     border-left: 4px solid #10b981; // Green-500
@@ -68,6 +45,10 @@ onUnmounted(() => {
 
   &.error {
     border-left: 4px solid $danger-color;
+  }
+
+  &.info {
+    border-left: 4px solid $primary-color;
   }
 }
 
@@ -98,17 +79,6 @@ onUnmounted(() => {
 
   &:hover {
     color: $text-color;
-  }
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(1rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 </style>

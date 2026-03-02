@@ -14,7 +14,12 @@ const pinia = createPinia()
 app.use(pinia)
 
 const configStore = useConfigStore()
-await configStore.fetchConfig()
+
+try {
+  await configStore.fetchConfig()
+} catch (err) {
+  // Config store handles its own error state which ErrorState.vue will show.
+}
 
 if (configStore.authEnabled) {
   const authStore = useAuthStore()

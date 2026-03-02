@@ -32,9 +32,7 @@
           />
         </div>
 
-        <div v-if="error" class="error-alert">
-          {{ error }}
-        </div>
+        <ErrorState :error="error" />
 
         <button type="submit" class="btn-primary" :disabled="loading">
           <span v-if="loading" class="spinner"></span>
@@ -50,6 +48,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { formatError } from '@/api/client'
+import ErrorState from '@/components/ErrorState.vue'
 
 const username = ref('')
 const password = ref('')
@@ -159,18 +158,6 @@ const handleSubmit = async () => {
       cursor: not-allowed;
     }
   }
-}
-
-.error-alert {
-  background-color: rgba($danger-color, 0.1);
-  color: color.adjust($danger-color, $lightness: 10%);
-  padding: 0.75rem;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
-  font-size: 0.9rem;
-  border: 1px solid rgba($danger-color, 0.2);
-  display: flex;
-  align-items: center;
 }
 
 .btn-primary {
