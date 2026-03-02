@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useNotificationStore } from '@/stores/notifications'
 
 const client = axios.create({
   baseURL: window.config?.apiBaseUrl || '/api',
@@ -22,14 +23,12 @@ client.interceptors.response.use(
 
     // We only want to show notification if not cancelled manually by axios
     if (!axios.isCancel(error)) {
-      // Dispatch globally so that ToastContainer can pick it up without Pinia injection issues
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('app-notify', {
-          detail: {
-            message: formatError(error),
-            type: 'error'
-          }
-        }))
+      try {
+        const store = useNotificationStore()
+        store.addNotification(formatError(error), 'error')
+      } catch (e) {
+        // Fallback if Pinia is somehow not ready
+        console.error("Failed to add notification:", e)
       }
     }
 

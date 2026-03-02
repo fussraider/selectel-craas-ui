@@ -58,6 +58,11 @@
       <div v-if="store.registries.length === 0 && !store.loading" class="empty-state">
           No registries found.
       </div>
+
+      <ErrorState
+        v-if="store.error"
+        :error="store.error"
+      />
     </div>
 
     <div class="sidebar-footer">
@@ -89,6 +94,7 @@ import { useConfigStore } from '@/stores/config'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import RepositoryTree from './RepositoryTree.vue'
+import ErrorState from './ErrorState.vue'
 
 const store = useRegistryStore()
 const configStore = useConfigStore()
