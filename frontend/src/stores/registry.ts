@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import axios from 'axios'
 import client, { formatError } from '@/api/client'
+import { useNotificationStore } from '@/stores/notifications'
 import type { Project, Registry, Repository, Image, GCInfo, CleanupResult } from '@/types'
 
 export const useRegistryStore = defineStore('registry', () => {
@@ -19,7 +20,7 @@ export const useRegistryStore = defineStore('registry', () => {
   const gcLoading = ref(false) // GC info/action loading
 
   const error = ref<string | null>(null)
-  const success = ref<string | null>(null)
+  const notifications = useNotificationStore()
 
   const handleError = (err: unknown) => {
     console.error(err)
@@ -28,7 +29,6 @@ export const useRegistryStore = defineStore('registry', () => {
 
   const clearNotifications = () => {
       error.value = null
-      success.value = null
   }
 
   const fetchProjects = async () => {
@@ -113,7 +113,7 @@ export const useRegistryStore = defineStore('registry', () => {
       try {
           await client.delete(`/projects/${pid}/registries/${rid}`)
           registries.value = registries.value.filter(r => r.id !== rid)
-          success.value = "Registry deleted successfully"
+          notifications.addNotification("Registry deleted successfully", "success")
       } catch (err) {
           handleError(err)
           throw err
@@ -134,7 +134,7 @@ export const useRegistryStore = defineStore('registry', () => {
               registry.repositories = registry.repositories.filter(r => r.name !== rname)
           }
 
-          success.value = `Repository ${rname} deleted successfully`
+          notifications.addNotification(`Repository ${rname} deleted successfully`, "success")
       } catch (err) {
           handleError(err)
           throw err
@@ -187,7 +187,7 @@ export const useRegistryStore = defineStore('registry', () => {
 
           const digestsSet = new Set(digests)
           images.value = images.value.filter(i => !digestsSet.has(i.digest))
-          success.value = `Cleanup successful: ${res.data.deleted.length} images deleted.`
+          notifications.addNotification(`Cleanup successful: ${res.data.deleted.length} images deleted.`, "success")
       } catch (err) {
           handleError(err)
           throw err
@@ -214,7 +214,7 @@ export const useRegistryStore = defineStore('registry', () => {
       clearNotifications()
       try {
           await client.post(`/projects/${pid}/registries/${rid}/gc`)
-          success.value = "Garbage collection initiated"
+          notifications.addNotification("Garbage collection initiated", "success")
       } catch (err) {
           handleError(err)
           throw err
@@ -234,7 +234,6 @@ export const useRegistryStore = defineStore('registry', () => {
       deletionLoading,
       gcLoading,
       error,
-      success,
       fetchProjects,
       fetchRegistries,
       deleteRegistry,

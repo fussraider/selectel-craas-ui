@@ -40,19 +40,7 @@
         </div>
     </div>
 
-    <!-- Toast Notifications -->
-    <ToastNotification
-      v-if="store.error"
-      type="error"
-      :message="store.error"
-      @close="store.clearNotifications"
-    />
-    <ToastNotification
-      v-if="store.success"
-      type="success"
-      :message="store.success"
-      @close="store.clearNotifications"
-    />
+    <ErrorState :error="store.error" />
 
     <div v-if="!store.imagesLoading || store.images.length > 0" class="list-container">
       <div class="list-controls" v-if="store.images.length > 0" ref="controlsRef">
@@ -213,7 +201,7 @@ import { useConfigStore } from '@/stores/config'
 import type { Image } from '@/types'
 import { onMounted, onUnmounted, computed, ref, watch, useTemplateRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ToastNotification from '@/components/ToastNotification.vue'
+import ErrorState from '@/components/ErrorState.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import { useConfirmModal } from '@/composables/useConfirmModal'
 

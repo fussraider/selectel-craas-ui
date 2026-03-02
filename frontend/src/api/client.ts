@@ -7,6 +7,8 @@ const client = axios.create({
   }
 })
 
+import { useNotificationStore } from '@/stores/notifications'
+
 client.interceptors.response.use(
   response => response,
   error => {
@@ -19,6 +21,18 @@ client.interceptors.response.use(
         window.location.href = '/login'
       }
     }
+
+    // We only want to show notification if not cancelled manually by axios
+    if (!axios.isCancel(error)) {
+      try {
+        const notifications = useNotificationStore()
+        notifications.addNotification(formatError(error), 'error')
+      } catch (e) {
+        // Fallback or ignore if store is not available
+        console.error('Failed to add error notification:', e)
+      }
+    }
+
     return Promise.reject(error)
   }
 )

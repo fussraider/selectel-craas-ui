@@ -168,13 +168,6 @@ const logout = async () => {
     to { transform: rotate(360deg); }
 }
 
-.error-msg {
-    padding: 1rem;
-    color: $danger-color;
-    font-size: 0.85rem;
-    background-color: rgba($danger-color, 0.1);
-}
-
 .repo-list {
     flex: 1;
     overflow-y: auto;
