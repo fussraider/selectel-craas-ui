@@ -19,6 +19,10 @@ client.interceptors.response.use(
       if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login'
       }
+
+      // Do not show a global notification for 401 to avoid double errors
+      // during auth checks or on the login page itself.
+      return Promise.reject(error)
     }
 
     // We only want to show notification if not cancelled manually by axios
