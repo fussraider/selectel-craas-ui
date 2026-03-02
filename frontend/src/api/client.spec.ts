@@ -43,7 +43,7 @@ describe('API Client Interceptor', () => {
     error.response = { status: 401 }
 
     // Get the interceptor function
-    const rejectInterceptor = (client.interceptors.response as unknown as InterceptorHandlers).handlers[0].rejected
+    const rejectInterceptor = (client.interceptors.response as unknown as InterceptorHandlers).handlers[0]!.rejected
 
     // Spy on notification store
     const notificationStore = useNotificationStore()
@@ -65,7 +65,7 @@ describe('API Client Interceptor', () => {
     error.isAxiosError = true
     error.response = { status: 500, data: 'Internal Server Error' }
 
-    const rejectInterceptor = (client.interceptors.response as unknown as InterceptorHandlers).handlers[0].rejected
+    const rejectInterceptor = (client.interceptors.response as unknown as InterceptorHandlers).handlers[0]!.rejected
 
     const notificationStore = useNotificationStore()
     const addNotificationSpy = vi.spyOn(notificationStore, 'addNotification')
@@ -84,7 +84,7 @@ describe('API Client Interceptor', () => {
     // Mock axios.isCancel to return true
     vi.spyOn(axios, 'isCancel').mockReturnValue(true)
 
-    const rejectInterceptor = (client.interceptors.response as unknown as InterceptorHandlers).handlers[0].rejected
+    const rejectInterceptor = (client.interceptors.response as unknown as InterceptorHandlers).handlers[0]!.rejected
 
     const notificationStore = useNotificationStore()
     const addNotificationSpy = vi.spyOn(notificationStore, 'addNotification')
