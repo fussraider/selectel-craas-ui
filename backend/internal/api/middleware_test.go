@@ -78,6 +78,12 @@ func TestEnableCORS(t *testing.T) {
 					origin, tt.expectedOrigin)
 			}
 
+			// Check the Access-Control-Allow-Credentials header
+			if credentials := rr.Header().Get("Access-Control-Allow-Credentials"); credentials != "true" {
+				t.Errorf("handler returned wrong Access-Control-Allow-Credentials header: got %v want %v",
+					credentials, "true")
+			}
+
 			// Check other CORS headers
 			if methods := rr.Header().Get("Access-Control-Allow-Methods"); methods == "" {
 				t.Errorf("handler returned empty Access-Control-Allow-Methods header")

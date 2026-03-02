@@ -3,6 +3,7 @@ import { useNotificationStore } from '@/stores/notifications'
 
 const client = axios.create({
   baseURL: window.config?.apiBaseUrl || '/api',
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
   }
