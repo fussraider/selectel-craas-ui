@@ -21,6 +21,7 @@ func TestLogin(t *testing.T) {
 		authLogin      string
 		authPassword   string
 		jwtSecret      string
+		cookieSecure   bool
 		requestBody    interface{}
 		expectedStatus int
 		expectCookie   bool
@@ -63,6 +64,18 @@ func TestLogin(t *testing.T) {
 			authLogin:      "admin",
 			authPassword:   "password",
 			jwtSecret:      "secret",
+			cookieSecure:   true,
+			requestBody:    LoginRequest{Login: "admin", Password: "password"},
+			expectedStatus: http.StatusOK,
+			expectCookie:   true,
+		},
+		{
+			name:           "Successful Login Insecure Cookie",
+			authEnabled:    true,
+			authLogin:      "admin",
+			authPassword:   "password",
+			jwtSecret:      "secret",
+			cookieSecure:   false,
 			requestBody:    LoginRequest{Login: "admin", Password: "password"},
 			expectedStatus: http.StatusOK,
 			expectCookie:   true,
@@ -76,6 +89,7 @@ func TestLogin(t *testing.T) {
 				AuthLogin:    tt.authLogin,
 				AuthPassword: tt.authPassword,
 				JWTSecret:    tt.jwtSecret,
+				CookieSecure: tt.cookieSecure,
 			}
 			server := &Server{
 				Config: cfg,
@@ -118,8 +132,8 @@ func TestLogin(t *testing.T) {
 						if !cookie.HttpOnly {
 							t.Error("expected HttpOnly cookie")
 						}
-						if !cookie.Secure {
-							t.Error("expected Secure cookie")
+						if cookie.Secure != tt.cookieSecure {
+							t.Errorf("expected Secure cookie: %v, got %v", tt.cookieSecure, cookie.Secure)
 						}
 						break
 					}
@@ -133,7 +147,11 @@ func TestLogin(t *testing.T) {
 }
 
 func TestLogout(t *testing.T) {
-	server := &Server{}
+	server := &Server{
+		Config: &config.Config{
+			CookieSecure: true,
+		},
+	}
 	req := httptest.NewRequest("POST", "/api/logout", nil)
 	rr := httptest.NewRecorder()
 

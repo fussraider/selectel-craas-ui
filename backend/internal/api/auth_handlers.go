@@ -57,7 +57,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  time.Now().Add(24 * time.Hour),
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   s.Config.CookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -71,7 +71,7 @@ func (s *Server) Logout(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   s.Config.CookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	})
 	w.WriteHeader(http.StatusOK)

@@ -22,6 +22,8 @@ services:
       - PROTECTED_TAGS=latest,stable
       # CORS (for local development, this needs to match the frontend origin)
       - CORS_ALLOWED_ORIGIN=http://localhost
+      # Allow insecure cookies for local development (http)
+      - COOKIE_SECURE=false
 
   frontend:
     #image: ghcr.io/fussraider/selectel-craas-ui-frontend:latest
