@@ -17,7 +17,7 @@ const configStore = useConfigStore()
 
 try {
   await configStore.fetchConfig()
-} catch (err) {
+} catch {
   // Config store handles its own error state which ErrorState.vue will show.
 }
 
@@ -31,5 +31,6 @@ if (configStore.authEnabled) {
 }
 
 app.use(router)
+await router.isReady()
 
 app.mount('#app')
