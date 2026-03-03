@@ -34,9 +34,10 @@ type Config struct {
 	// Authentication
 	AuthEnabled  bool
 	AuthLogin    string
-	AuthPassword string
-	JWTSecret    string
-	CookieSecure bool
+	AuthPassword   string
+	JWTSecret      string
+	CookieSecure   bool
+	CookieSameSite string
 
 	// CORS
 	CORSAllowedOrigin string
@@ -80,8 +81,9 @@ func Load() (*Config, error) {
 		AuthEnabled:  getEnvBool("AUTH_ENABLED", false),
 		AuthLogin:    getEnv("AUTH_LOGIN", ""),
 		AuthPassword: getEnv("AUTH_PASSWORD", ""),
-		JWTSecret:    jwtSecret,
-		CookieSecure: getEnvBool("COOKIE_SECURE", true),
+		JWTSecret:      jwtSecret,
+		CookieSecure:   getEnvBool("COOKIE_SECURE", true),
+		CookieSameSite: getEnv("COOKIE_SAMESITE", "lax"),
 
 		CORSAllowedOrigin: getEnv("CORS_ALLOWED_ORIGIN", ""),
 	}, nil

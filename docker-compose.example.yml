@@ -24,6 +24,7 @@ services:
       - CORS_ALLOWED_ORIGIN=http://localhost
       # Allow insecure cookies for local development (http)
       - COOKIE_SECURE=false
+      - COOKIE_SAMESITE=none
 
   frontend:
     #image: ghcr.io/fussraider/selectel-craas-ui-frontend:latest
