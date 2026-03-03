@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -17,6 +18,19 @@ type LoginRequest struct {
 
 type LoginResponse struct {
 	User string `json:"user"`
+}
+
+func (s *Server) getSameSiteMode() http.SameSite {
+	switch strings.ToLower(s.Config.CookieSameSite) {
+	case "none":
+		return http.SameSiteNoneMode
+	case "strict":
+		return http.SameSiteStrictMode
+	case "lax":
+		fallthrough
+	default:
+		return http.SameSiteLaxMode
+	}
 }
 
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
@@ -57,8 +71,8 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  time.Now().Add(24 * time.Hour),
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
+		Secure:   s.Config.CookieSecure,
+		SameSite: s.getSameSiteMode(),
 	})
 
 	RespondJSON(w, http.StatusOK, LoginResponse{User: req.Login})
@@ -71,8 +85,8 @@ func (s *Server) Logout(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
+		Secure:   s.Config.CookieSecure,
+		SameSite: s.getSameSiteMode(),
 	})
 	w.WriteHeader(http.StatusOK)
 }

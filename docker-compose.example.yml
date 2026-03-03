@@ -22,6 +22,9 @@ services:
       - PROTECTED_TAGS=latest,stable
       # CORS (for local development, this needs to match the frontend origin)
       - CORS_ALLOWED_ORIGIN=http://localhost
+      # Allow insecure cookies for local development (http)
+      - COOKIE_SECURE=false
+      - COOKIE_SAMESITE=none
 
   frontend:
     #image: ghcr.io/fussraider/selectel-craas-ui-frontend:latest
@@ -38,6 +41,8 @@ services:
       # - API_BASE_URL=https://api.example.com
       #
       # option 2: Local Development (backend exposed on localhost:8080)
-      - API_BASE_URL=http://localhost:8080/api
+      - API_BASE_URL=/api
+      # Tells nginx to proxy /api/ requests to the backend service to bypass browser cross-port restrictions
+      - NGINX_PROXY_BACKEND=http://backend:8080
     depends_on:
       - backend

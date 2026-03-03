@@ -66,12 +66,31 @@ To connect to the Selectel Container Registry, you need credentials for a user w
 
 You can protect the web interface with Basic Authentication to restrict access.
 
-| Variable        | Description                              | Default               |
-|:----------------|:-----------------------------------------|:----------------------|
-| `AUTH_ENABLED`  | Enable Basic Auth for the web interface  | `false`               |
-| `AUTH_LOGIN`    | Username for web interface login         | (Required if enabled) |
-| `AUTH_PASSWORD` | Password for web interface login         | (Required if enabled) |
-| `JWT_SECRET`    | Secret key for signing JWT tokens        | (Required if enabled) |
+| Variable          | Description                                                    | Default               |
+|:------------------|:---------------------------------------------------------------|:----------------------|
+| `AUTH_ENABLED`    | Enable Basic Auth for the web interface                        | `false`               |
+| `AUTH_LOGIN`      | Username for web interface login                               | (Required if enabled) |
+| `AUTH_PASSWORD`   | Password for web interface login                               | (Required if enabled) |
+| `JWT_SECRET`      | Secret key for signing JWT tokens                              | (Auto-generated)      |
+| `COOKIE_SECURE`   | Set the `Secure` flag on the auth cookie (requires HTTPS)      | `true`                |
+| `COOKIE_SAMESITE` | Set the `SameSite` attribute (`lax`, `strict`, `none`)         | `lax`                 |
+
+#### Authentication Cookie Configuration Examples
+
+Depending on how you deploy the frontend and backend, you may need to adjust the cookie settings so browsers don't reject the authentication token:
+
+*   **Production (Same Domain, HTTPS):**
+    *   `COOKIE_SECURE=true`
+    *   `COOKIE_SAMESITE=lax` (or `strict`)
+    *   *Use case:* Frontend at `https://craas.example.com` and backend proxying `/api` on the same domain.
+*   **Production (Cross-Domain/Subdomain, HTTPS):**
+    *   `COOKIE_SECURE=true`
+    *   `COOKIE_SAMESITE=none`
+    *   *Use case:* Frontend at `https://frontend.example.com` and backend at `https://api.example.com`.
+*   **Local Development via Docker (Cross-Origin HTTP):**
+    *   `COOKIE_SECURE=false`
+    *   `COOKIE_SAMESITE=none`
+    *   *Use case:* Accessing the frontend via a local domain (e.g., `http://frontend.local`) while the backend runs on `http://localhost:8080`.
 
 ### Feature Flags & Safety
 

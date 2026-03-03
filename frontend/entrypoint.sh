@@ -13,6 +13,15 @@ if [ -n "$API_BASE_URL" ]; then
     fi
 fi
 
+# Configure reverse proxy if NGINX_PROXY_BACKEND is set
+PROXY_BLOCK=""
+if [ -n "$NGINX_PROXY_BACKEND" ]; then
+    PROXY_BLOCK="location /api/ {\n        proxy_pass $NGINX_PROXY_BACKEND;\n        proxy_set_header Host \$host;\n        proxy_set_header X-Real-IP \$remote_addr;\n        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto \$scheme;\n    }"
+fi
+
+# Apply the proxy block
+awk -v r="$PROXY_BLOCK" '{gsub(/^[ \t]*# __API_PROXY_BLOCK__/, r)}1' /etc/nginx/conf.d/default.conf > /tmp/default.conf.tmp && mv /tmp/default.conf.tmp /etc/nginx/conf.d/default.conf
+
 # Replace CSP connect source placeholder in nginx config
 # using | as delimiter since it is not valid in URLs (RFC 3986)
 sed -i "s|__CSP_CONNECT_SRC__|$CSP_CONNECT_SRC|g" /etc/nginx/conf.d/default.conf

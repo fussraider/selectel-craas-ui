@@ -21,6 +21,8 @@ func TestLogin(t *testing.T) {
 		authLogin      string
 		authPassword   string
 		jwtSecret      string
+		cookieSecure   bool
+		cookieSameSite string
 		requestBody    interface{}
 		expectedStatus int
 		expectCookie   bool
@@ -63,6 +65,20 @@ func TestLogin(t *testing.T) {
 			authLogin:      "admin",
 			authPassword:   "password",
 			jwtSecret:      "secret",
+			cookieSecure:   true,
+			cookieSameSite: "lax",
+			requestBody:    LoginRequest{Login: "admin", Password: "password"},
+			expectedStatus: http.StatusOK,
+			expectCookie:   true,
+		},
+		{
+			name:           "Successful Login Insecure Cookie",
+			authEnabled:    true,
+			authLogin:      "admin",
+			authPassword:   "password",
+			jwtSecret:      "secret",
+			cookieSecure:   false,
+			cookieSameSite: "none",
 			requestBody:    LoginRequest{Login: "admin", Password: "password"},
 			expectedStatus: http.StatusOK,
 			expectCookie:   true,
@@ -72,10 +88,12 @@ func TestLogin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &config.Config{
-				AuthEnabled:  tt.authEnabled,
-				AuthLogin:    tt.authLogin,
-				AuthPassword: tt.authPassword,
-				JWTSecret:    tt.jwtSecret,
+				AuthEnabled:    tt.authEnabled,
+				AuthLogin:      tt.authLogin,
+				AuthPassword:   tt.authPassword,
+				JWTSecret:      tt.jwtSecret,
+				CookieSecure:   tt.cookieSecure,
+				CookieSameSite: tt.cookieSameSite,
 			}
 			server := &Server{
 				Config: cfg,
@@ -118,8 +136,17 @@ func TestLogin(t *testing.T) {
 						if !cookie.HttpOnly {
 							t.Error("expected HttpOnly cookie")
 						}
-						if !cookie.Secure {
-							t.Error("expected Secure cookie")
+						if cookie.Secure != tt.cookieSecure {
+							t.Errorf("expected Secure cookie: %v, got %v", tt.cookieSecure, cookie.Secure)
+						}
+						expectedSameSite := http.SameSiteLaxMode
+						if tt.cookieSameSite == "none" {
+							expectedSameSite = http.SameSiteNoneMode
+						} else if tt.cookieSameSite == "strict" {
+							expectedSameSite = http.SameSiteStrictMode
+						}
+						if cookie.SameSite != expectedSameSite {
+							t.Errorf("expected SameSite cookie: %v, got %v", expectedSameSite, cookie.SameSite)
 						}
 						break
 					}
@@ -133,7 +160,11 @@ func TestLogin(t *testing.T) {
 }
 
 func TestLogout(t *testing.T) {
-	server := &Server{}
+	server := &Server{
+		Config: &config.Config{
+			CookieSecure: true,
+		},
+	}
 	req := httptest.NewRequest("POST", "/api/logout", nil)
 	rr := httptest.NewRecorder()
 
