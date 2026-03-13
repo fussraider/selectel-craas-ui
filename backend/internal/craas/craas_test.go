@@ -211,6 +211,32 @@ func TestDeleteRegistry(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestDeleteRepository(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/registries/reg1/repositories/repo1" && r.Method == "DELETE" {
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
+	err := svc.DeleteRepository(context.Background(), "fake-token", "reg1", "repo1")
+	assert.NoError(t, err)
+}
+
+func TestDeleteRepository_Error(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	svc := &Service{endpoint: ts.URL + "/v1", logger: testLogger}
+	err := svc.DeleteRepository(context.Background(), "fake-token", "reg1", "repo1")
+	assert.Error(t, err)
+}
+
 func TestCleanupRepository(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Expect encoded path
