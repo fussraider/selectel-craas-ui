@@ -196,12 +196,14 @@ func (s *Service) fetchImageDigests(ctx context.Context, client *http.Client, to
 func findDigests(data interface{}, seen map[string]struct{}, result *[]string) {
 	switch v := data.(type) {
 	case string:
-		if digestRegex.MatchString(v) {
-			if _, ok := seen[v]; !ok {
-				seen[v] = struct{}{}
-				*result = append(*result, v)
-			}
+		if !digestRegex.MatchString(v) {
+			return
 		}
+		if _, ok := seen[v]; ok {
+			return
+		}
+		seen[v] = struct{}{}
+		*result = append(*result, v)
 	case []interface{}:
 		for _, item := range v {
 			findDigests(item, seen, result)
