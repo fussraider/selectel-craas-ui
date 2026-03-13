@@ -6,9 +6,19 @@ import (
 	"testing"
 	"time"
 
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"os"
+
+	"github.com/generic/selectel-craas-web/internal/auth"
 	"github.com/generic/selectel-craas-web/internal/config"
+	"github.com/generic/selectel-craas-web/internal/craas"
 	"github.com/golang-jwt/jwt/v5"
 )
+
+var testLogger = slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 func TestEnableCORS(t *testing.T) {
 	tests := []struct {
@@ -93,6 +103,203 @@ func TestEnableCORS(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExecuteWithRetry(t *testing.T) {
+	// A helper to quickly set up a mock auth server.
+	setupMockAuth := func(t *testing.T, handler http.HandlerFunc) (*httptest.Server, *auth.Client) {
+		ts := httptest.NewServer(handler)
+		t.Cleanup(ts.Close)
+
+		cfg := &config.Config{
+			SelectelUsername:  "testuser",
+			SelectelAccountID: "12345",
+			SelectelPassword:  "password",
+		}
+		client := auth.New(cfg, testLogger)
+		client.AuthURL = ts.URL + "/v3/auth/tokens"
+		return ts, client
+	}
+
+	t.Run("Success on first attempt", func(t *testing.T) {
+		var tokenFetchCount int
+		ts, authClient := setupMockAuth(t, func(w http.ResponseWriter, r *http.Request) {
+			tokenFetchCount++
+			w.Header().Set("X-Subject-Token", "token1")
+			w.WriteHeader(http.StatusCreated)
+			w.Write([]byte(`{}`))
+		})
+		_ = ts
+
+		server := &Server{
+			Auth:   authClient,
+			Logger: testLogger,
+		}
+
+		var opCalls int
+		err := server.ExecuteWithRetry(context.Background(), "pid1", func(token string) error {
+			opCalls++
+			if token != "token1" {
+				return fmt.Errorf("expected token1, got %s", token)
+			}
+			return nil
+		})
+
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if tokenFetchCount != 1 {
+			t.Errorf("expected 1 token fetch, got %d", tokenFetchCount)
+		}
+		if opCalls != 1 {
+			t.Errorf("expected 1 op call, got %d", opCalls)
+		}
+	})
+
+	t.Run("Initial token fetch fails, retry succeeds", func(t *testing.T) {
+		var tokenFetchCount int
+		ts, authClient := setupMockAuth(t, func(w http.ResponseWriter, r *http.Request) {
+			tokenFetchCount++
+			if tokenFetchCount == 1 {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("X-Subject-Token", "token2")
+			w.WriteHeader(http.StatusCreated)
+			w.Write([]byte(`{}`))
+		})
+		_ = ts
+
+		server := &Server{
+			Auth:   authClient,
+			Logger: testLogger,
+		}
+
+		var opCalls int
+		err := server.ExecuteWithRetry(context.Background(), "pid2", func(token string) error {
+			opCalls++
+			if token != "token2" {
+				return fmt.Errorf("expected token2, got %s", token)
+			}
+			return nil
+		})
+
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if tokenFetchCount != 2 {
+			t.Errorf("expected 2 token fetches, got %d", tokenFetchCount)
+		}
+		if opCalls != 1 {
+			t.Errorf("expected 1 op call, got %d", opCalls)
+		}
+	})
+
+	t.Run("Operation returns standard error, fails immediately without retry", func(t *testing.T) {
+		ts, authClient := setupMockAuth(t, func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Subject-Token", "token1")
+			w.WriteHeader(http.StatusCreated)
+			w.Write([]byte(`{}`))
+		})
+		_ = ts
+
+		server := &Server{
+			Auth:   authClient,
+			Logger: testLogger,
+		}
+
+		var opCalls int
+		expectedErr := errors.New("standard error")
+		err := server.ExecuteWithRetry(context.Background(), "pid3", func(token string) error {
+			opCalls++
+			return expectedErr
+		})
+
+		if err != expectedErr {
+			t.Fatalf("expected error %v, got %v", expectedErr, err)
+		}
+		if opCalls != 1 {
+			t.Errorf("expected 1 op call, got %d", opCalls)
+		}
+	})
+
+	t.Run("Operation returns Auth error, succeeds on retry", func(t *testing.T) {
+		var tokenFetchCount int
+		ts, authClient := setupMockAuth(t, func(w http.ResponseWriter, r *http.Request) {
+			tokenFetchCount++
+			w.Header().Set("X-Subject-Token", fmt.Sprintf("token%d", tokenFetchCount))
+			w.WriteHeader(http.StatusCreated)
+			w.Write([]byte(`{}`))
+		})
+		_ = ts
+
+		server := &Server{
+			Auth:   authClient,
+			Logger: testLogger,
+		}
+
+		var opCalls int
+		err := server.ExecuteWithRetry(context.Background(), "pid4", func(token string) error {
+			opCalls++
+			if opCalls == 1 {
+				if token != "token1" {
+					return fmt.Errorf("expected token1, got %s", token)
+				}
+				return craas.ErrUnauthorized
+			}
+			if token != "token2" {
+				return fmt.Errorf("expected token2, got %s", token)
+			}
+			return nil
+		})
+
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if tokenFetchCount != 2 {
+			t.Errorf("expected 2 token fetches, got %d", tokenFetchCount)
+		}
+		if opCalls != 2 {
+			t.Errorf("expected 2 op calls, got %d", opCalls)
+		}
+	})
+
+	t.Run("Operation returns Auth error, token re-fetch fails", func(t *testing.T) {
+		var tokenFetchCount int
+		ts, authClient := setupMockAuth(t, func(w http.ResponseWriter, r *http.Request) {
+			tokenFetchCount++
+			if tokenFetchCount == 1 {
+				w.Header().Set("X-Subject-Token", "token1")
+				w.WriteHeader(http.StatusCreated)
+				w.Write([]byte(`{}`))
+				return
+			}
+			// Second fetch fails
+			w.WriteHeader(http.StatusInternalServerError)
+		})
+		_ = ts
+
+		server := &Server{
+			Auth:   authClient,
+			Logger: testLogger,
+		}
+
+		var opCalls int
+		err := server.ExecuteWithRetry(context.Background(), "pid5", func(token string) error {
+			opCalls++
+			return craas.ErrUnauthorized
+		})
+
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if tokenFetchCount != 2 {
+			t.Errorf("expected 2 token fetches, got %d", tokenFetchCount)
+		}
+		if opCalls != 1 {
+			t.Errorf("expected 1 op call, got %d", opCalls)
+		}
+	})
 }
 
 func TestSecurityHeaders(t *testing.T) {
